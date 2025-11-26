@@ -3,15 +3,11 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "rootDirectory": "frontend",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://your-railway-app.railway.app/:path*"
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_BASE": "https://your-railway-app.railway.app"
-  }
+  ]
 }
 
