@@ -21,6 +21,9 @@ COPY backend/ /app/
 # Expose port (Railway will set PORT env var)
 EXPOSE 8000
 
-# Run the application
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Set environment variable for port
+ENV PORT=8000
+
+# Run the application (no cd needed, we're already in /app)
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
