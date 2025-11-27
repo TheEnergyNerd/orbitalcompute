@@ -91,7 +91,11 @@ export function useSimPolling() {
             }
           } catch (e) {
             console.warn("[useSimPolling] Could not save error to localStorage:", e);
-            console.warn("[useSimPolling] localStorage may not be available:", e.message);
+            if (e instanceof Error) {
+              console.warn("[useSimPolling] localStorage may not be available:", e.message);
+            } else {
+              console.warn("[useSimPolling] localStorage may not be available (non-Error):", String(e));
+            }
           }
           
           // Show error message with localStorage instructions

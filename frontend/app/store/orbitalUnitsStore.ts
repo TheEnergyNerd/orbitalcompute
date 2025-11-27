@@ -33,6 +33,8 @@ interface OrbitalUnitsStore {
   deploymentQueue: OrbitalUnit[];
   totalRealWorldTimeDays: number; // Sum of all deployment real-world times
   addToQueue: (unit: Omit<OrbitalUnit, "id" | "status" | "buildStartTime">, strategicLevers?: StrategicLevers) => boolean; // Returns true if added, false if queue full
+  // Internal helper used by addToQueue; exposed here so the store type matches the implementation
+  addToQueueInternal: (unit: Omit<OrbitalUnit, "id" | "status" | "buildStartTime">, strategicLevers?: StrategicLevers) => boolean;
   startBuild: (unitId: string) => void;
   deployUnit: (unitId: string) => void;
   removeUnit: (unitId: string) => void;
@@ -131,18 +133,18 @@ export const useOrbitalUnitsStore = create<OrbitalUnitsStore>((set, get) => ({
     
     // For now, use leo_pod as base unit type
     // TODO: Map pod tiers to actual unit types
-    const unit: OrbitalUnit = {
-      ...unitData,
+      const unit: OrbitalUnit = {
+        ...unitData,
       cost: Math.round(costPerPod * 100) / 100,
       buildTimeDays: Math.round(buildTimePerPod),
-      id: `unit_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`,
-      status: "queued",
-    };
+        id: `unit_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        status: "queued",
+      };
 
     set((state) => ({
-      deploymentQueue: [...state.deploymentQueue, unit],
+        deploymentQueue: [...state.deploymentQueue, unit],
     }));
     
     return true; // Successfully added
@@ -209,11 +211,11 @@ export const useOrbitalUnitsStore = create<OrbitalUnitsStore>((set, get) => ({
       }
       
       return {
-        units: state.units.map((u) =>
-          u.id === unitId
+      units: state.units.map((u) =>
+        u.id === unitId
             ? { ...u, status: "deployed" as const, deployedAt: Date.now() }
-            : u
-        ),
+          : u
+      ),
       };
     });
   },
