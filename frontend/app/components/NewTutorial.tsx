@@ -14,8 +14,15 @@ export default function NewTutorial() {
     completeTutorial,
     startTutorial,
     isCompleted,
+    offloadPct,
+    activeLaunchProviders,
   } = useSandboxStore();
   const { getDeployedUnits } = useOrbitalUnitsStore();
+  // Subscribe to deployed units count so effects re-run when deployments change
+  const deployedCountForTutorial = useOrbitalUnitsStore(
+    (state) => state.getDeployedUnits().length
+  );
+  const completionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState<TutorialStep>(0);
   const prevOrbitModeRef = useRef<string>("");
   const prevOffloadRef = useRef<number>(0);
@@ -128,25 +135,51 @@ export default function NewTutorial() {
 
     const deployedUnits = getDeployedUnits();
     const deployedCount = deployedUnits.length;
-    const sandboxState = useSandboxStore.getState();
-    const { offloadPct, activeLaunchProviders } = sandboxState;
+
+    // Clear any pending completion timers whenever we re-evaluate
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+      completionTimeoutRef.current = null;
+    }
 
     // Step 4: Detect offload change
-    if (step === 4 && Math.abs(offloadPct - prevOffloadRef.current) > 15) {
-      prevOffloadRef.current = offloadPct;
-      setTimeout(() => {
-        nextTutorialStep();
-      }, 2000);
-      return;
+    if (step === 4) {
+      const baseline = prevOffloadRef.current;
+      const delta = Math.abs(offloadPct - baseline);
+      // Treat this as "reduce ground load by ~20%":
+      // - either absolute change of at least 15 percentage points
+      // - or current offload is at least baseline + 20 (handles any starting value)
+      // - or current offload is at least 20% (common case: baseline = 0)
+      const changedEnough =
+        delta >= 15 || offloadPct >= baseline + 20 || offloadPct >= 20;
+
+      if (changedEnough) {
+        prevOffloadRef.current = offloadPct;
+        const scheduledStep = step;
+        completionTimeoutRef.current = setTimeout(() => {
+          // Only advance if we're still on the same step (prevents cascading jumps)
+          const current = useSandboxStore.getState().tutorialStep;
+          if (current === scheduledStep) {
+            nextTutorialStep();
+          }
+        }, 2000);
+        return;
+      }
     }
 
     // Step 5: Detect launch provider toggle (Starship enabled)
     if (step === 5) {
-      const activeProviders = sandboxState.activeLaunchProviders;
-      if (activeProviders.includes("Starship") && !prevLaunchProviderRef.current.includes("Starship")) {
-        prevLaunchProviderRef.current = activeProviders.join(",");
-        setTimeout(() => {
-          nextTutorialStep();
+      if (
+        activeLaunchProviders.includes("Starship") &&
+        !prevLaunchProviderRef.current.includes("Starship")
+      ) {
+        prevLaunchProviderRef.current = activeLaunchProviders.join(",");
+        const scheduledStep = step;
+        completionTimeoutRef.current = setTimeout(() => {
+          const current = useSandboxStore.getState().tutorialStep;
+          if (current === scheduledStep) {
+            nextTutorialStep();
+          }
         }, 2000);
         return;
       }
@@ -155,12 +188,24 @@ export default function NewTutorial() {
     // Step 6: Detect unit deployment
     if (step === 6 && deployedCount > prevDeployedCountRef.current) {
       prevDeployedCountRef.current = deployedCount;
-      setTimeout(() => {
-        nextTutorialStep();
+      const scheduledStep = step;
+      completionTimeoutRef.current = setTimeout(() => {
+        const current = useSandboxStore.getState().tutorialStep;
+        if (current === scheduledStep) {
+          nextTutorialStep();
+        }
       }, 3000);
       return;
     }
-  }, [step, isTutorialActive, getDeployedUnits, nextTutorialStep]);
+  }, [
+    step,
+    isTutorialActive,
+    getDeployedUnits,
+    nextTutorialStep,
+    offloadPct,
+    activeLaunchProviders,
+    deployedCountForTutorial,
+  ]);
 
   // State for cutout overlay divs
   const [cutoutOverlay, setCutoutOverlay] = useState<{

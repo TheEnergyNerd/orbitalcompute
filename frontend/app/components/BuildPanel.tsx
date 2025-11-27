@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOrbitalUnitsStore, UNIT_DEFINITIONS, UnitType } from "../store/orbitalUnitsStore";
 import { useSandboxStore } from "../store/sandboxStore";
 import { calculateDeploymentEngine, type DeploymentState } from "../lib/deployment/deploymentEngine";
@@ -29,7 +29,21 @@ export default function BuildPanel({ isOpen, onClose }: BuildPanelProps) {
     activeLaunchProviders,
   };
   const engine = calculateDeploymentEngine(deploymentState);
-  const canAddToQueue = queuedUnits.length < engine.maxQueue;
+  const canAddToQueue = queuedUnits.length + quantity <= engine.maxQueue;
+
+  // Clear stale "queue full" error when the panel is reopened
+  useEffect(() => {
+    if (isOpen) {
+      setQueueFullError(false);
+    }
+  }, [isOpen]);
+
+  // Also clear the error once there is actually room in the queue again
+  useEffect(() => {
+    if (queueFullError && queuedUnits.length < engine.maxQueue) {
+      setQueueFullError(false);
+    }
+  }, [queueFullError, queuedUnits.length, engine.maxQueue]);
 
   if (!isOpen) return null;
 
@@ -62,7 +76,7 @@ export default function BuildPanel({ isOpen, onClose }: BuildPanelProps) {
     }
     
     if (successCount > 0) {
-      onClose();
+    onClose();
     }
   };
 

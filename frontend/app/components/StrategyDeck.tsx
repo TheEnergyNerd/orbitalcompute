@@ -189,7 +189,10 @@ export default function StrategyDeck() {
               <div className="space-y-1.5">
                 {(Object.keys(LAUNCH_PROVIDERS) as LaunchProviderId[]).map((providerId) => {
                   const provider = LAUNCH_PROVIDERS[providerId];
-                  const isUnlocked = unlockedLaunchProviders.includes(providerId);
+                  // During tutorial step 5+, temporarily allow Starship so the user can complete the step
+                  const tutorialUnlockOverride =
+                    isTutorialActive && typeof tutorialStep === "number" && tutorialStep >= 5 && providerId === "Starship";
+                  const isUnlocked = unlockedLaunchProviders.includes(providerId) || tutorialUnlockOverride;
                   const isActive = activeLaunchProviders.includes(providerId);
                   return (
                     <label
