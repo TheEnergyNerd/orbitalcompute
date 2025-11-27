@@ -3,7 +3,14 @@ const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 const nextConfig = {
+  // Disable SWC minification so Cesium's ESM worker bundles are not parsed/minified,
+  // which avoids "'import' and 'export' cannot be used outside of module code" errors.
+  swcMinify: false,
   webpack: (config, { isServer }) => {
+    // Ensure module/rules objects exist
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+
     config.resolve.alias = {
       ...config.resolve.alias,
       cesium: "cesium",
@@ -13,24 +20,26 @@ const nextConfig = {
     // Files in public/ should be served as static assets, not processed
     config.watchOptions = {
       ...config.watchOptions,
-      ignored: ['**/public/**', '**/node_modules/**'],
+      ignored: ["**/public/**", "**/node_modules/**"],
     };
 
-    // Exclude Cesium worker files from Terser minification
-    if (config.optimization && config.optimization.minimizer) {
-      config.optimization.minimizer = config.optimization.minimizer.map((plugin) => {
-        if (plugin.constructor.name === "TerserPlugin") {
-          const originalExclude = plugin.options?.exclude || [];
-          plugin.options = {
-            ...plugin.options,
-            exclude: Array.isArray(originalExclude) 
-              ? [...originalExclude, /cesium\/Workers/, /public\/cesium/]
-              : [originalExclude, /cesium\/Workers/, /public\/cesium/],
-          };
-        }
-        return plugin;
-      });
-    }
+    // Completely disable JS minimization; Cesium's ESM worker bundles are not compatible
+    // with Terser/SWC minification in this environment.
+    config.optimization = config.optimization || {};
+    config.optimization.minimize = false;
+    config.optimization.minimizer = [];
+
+    // Treat Cesium worker bundles as static assets so build tools don't try to parse/minify them.
+    // This prevents errors like "'import' and 'export' cannot be used outside of module code"
+    // when Terser/SWC encounters Cesium's ESM worker chunks.
+    config.module.rules.push({
+      test: /chunk-.*\.js$/,
+      include: [
+        path.resolve(__dirname, "node_modules/cesium/Build/Cesium/Workers"),
+        path.resolve(__dirname, "public/cesium/Workers"),
+      ],
+      type: "asset/source",
+    });
 
     if (!isServer) {
       // Copy Cesium assets to public folder
