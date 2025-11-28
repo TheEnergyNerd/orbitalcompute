@@ -216,13 +216,8 @@ async def fetch_tles():
         try:
             cache_time = float(cache_time_file.read_text().strip())
             age = time.time() - cache_time
-            if age < cache_max_age:
-                print(f"[fetch_tles] Using cached TLEs (age: {age/3600:.1f} hours, expires in {(cache_max_age - age)/3600:.1f} hours)")
-                # Use cache if valid
-            else:
-                print(f"[fetch_tles] Cache expired (age: {age/3600:.1f} hours > {cache_max_age/3600:.1f} hours). Will try to fetch fresh TLEs.")
+            if age >= cache_max_age:
                 # Even if expired, prefer cache over risking rate limit
-                print(f"[fetch_tles] NOTE: Using expired cache to avoid rate limiting. TLEs are updated daily, so this is safe.")
                 age = 0  # Treat as fresh to use the cache
             
             if age < cache_max_age:
@@ -240,7 +235,6 @@ async def fetch_tles():
                             except Exception as e:
                                 continue
                 if len(sats) > 0:
-                    print(f"[fetch_tles] Loaded {len(sats)} satellites from cache")
                     return sats
         except Exception as e:
             print(f"[fetch_tles] Error reading cache: {e}")
@@ -257,7 +251,6 @@ async def fetch_tles():
     async with httpx.AsyncClient() as client:
         for url in urls:
             try:
-                print(f"[fetch_tles] Fetching from CelesTrak: {url}")
                 # Add proper headers to avoid 403
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -271,11 +264,8 @@ async def fetch_tles():
                 # Check if we got HTML (403 page) instead of TLE data
                 text = response.text.strip()
                 if text.startswith("<!DOCTYPE") or text.startswith("<html") or "403" in text or "Forbidden" in text or response.status_code == 403:
-                    print(f"[fetch_tles] Got 403 Forbidden response from {url}")
-                    print(f"[fetch_tles] CelesTrak rate limits requests. Using cached data to avoid rate limiting.")
                     # Always use cache if available when rate limited (even if expired)
                     if cache_file.exists():
-                        print(f"[fetch_tles] Using cache (expired or not) to avoid rate limit...")
                         lines = cache_file.read_text().strip().split("\n")
                         sats = []
                         for i in range(0, len(lines) - 1, 3):
@@ -290,10 +280,7 @@ async def fetch_tles():
                                     except Exception:
                                         continue
                         if len(sats) > 0:
-                            print(f"[fetch_tles] Loaded {len(sats)} satellites from cache (avoiding rate limit)")
                             return sats
-                    # If no cache and rate limited, skip this URL
-                    print(f"[fetch_tles] No cache available and rate limited. Trying next URL...")
                     continue
                 
                 # Parse TLEs
@@ -320,39 +307,19 @@ async def fetch_tles():
                                     print(f"[fetch_tles] Error parsing satellite {name}: {e}")
                                 continue
                 
-                if parse_errors > 0:
-                    print(f"[fetch_tles] Warning: {parse_errors} satellites failed to parse (total parsed: {len(sats)})")
-                
                 if len(sats) > 0:
                     # Save to cache
                     try:
                         cache_file.write_text("\n".join(raw_tle_text))
                         cache_time_file.write_text(str(time.time()))
-                        print(f"[fetch_tles] Cached {len(sats)} satellites to file")
                     except Exception as e:
                         print(f"[fetch_tles] Warning: Could not write cache: {e}")
-                    
-                    print(f"[fetch_tles] SUCCESS: Loaded {len(sats)} Starlink satellites from {url} (expected 8000-9000)")
-                    if len(sats) < 7000:
-                        print(f"[fetch_tles] WARNING: Only got {len(sats)} satellites, expected 8000-9000. May be incomplete.")
-                    else:
-                        print(f"[fetch_tles] EXCELLENT: Got {len(sats)} satellites from CelesTrak - this is the full dataset!")
                     return sats
-                else:
-                    print(f"[fetch_tles] WARNING: Parsed 0 satellites from {url}. Response length: {len(text)} chars, lines: {len(lines)}")
-                    print(f"[fetch_tles] No valid satellites found in response from {url}")
             except Exception as e:
-                error_msg = str(e) if e else "Unknown error"
-                print(f"[fetch_tles] Error fetching from {url}: {error_msg}")
-                import traceback
-                if "starlink" in url.lower():
-                    print(f"[fetch_tles] Full traceback:")
-                    traceback.print_exc()
                 continue
         
         # If all URLs failed, try to use expired cache
         if cache_file.exists():
-            print(f"[fetch_tles] All URLs failed, trying expired cache...")
             try:
                 lines = cache_file.read_text().strip().split("\n")
                 sats = []
@@ -368,10 +335,9 @@ async def fetch_tles():
                             except Exception:
                                 continue
                 if len(sats) > 0:
-                    print(f"[fetch_tles] Loaded {len(sats)} satellites from expired cache")
                     return sats
             except Exception as e:
-                print(f"[fetch_tles] Error reading expired cache: {e}")
+                pass
         
         # If all URLs failed, raise an error
         raise Exception("Failed to fetch TLEs from all available sources and no cache available")
@@ -609,10 +575,6 @@ async def update_simulation():
                 # Propagate all satellites from CelesTrak - no limit
                 # GPU optimizations allow us to process all satellites
                 satellites_to_process = satellites  # Process all satellites
-                if control["tick"] == 1:
-                    print(f"[Backend] DEBUG: Global satellites list has {len(satellites)} items, satellites_to_process has {len(satellites_to_process)} items")
-                elif control["tick"] % 60 == 0:
-                    print(f"[Backend] DEBUG: Processing {len(satellites_to_process)} satellites in update_simulation")
                 
                 orbital_nodes = []
                 sunlit_count = 0
@@ -1022,17 +984,6 @@ async def update_simulation():
                         )
                     )
 
-                # Debug: Log satellite count
-                if control["tick"] % 60 == 0:
-                    print(f"[Backend] Built {len(all_satellites)} satellites for sim_state (from {len(orbital_nodes)} orbital_nodes, satellites_to_return had {len(satellites_to_return)} items)")
-                elif control["tick"] == 1:
-                    print(f"[Backend] DEBUG: Built {len(all_satellites)} satellites for sim_state (from {len(orbital_nodes)} orbital_nodes, satellites_to_return had {len(satellites_to_return)} items)")
-                
-                # CRITICAL DEBUG: Check all_satellites before creating SimState
-                if control["tick"] == 1:
-                    print(f"[Backend] DEBUG: all_satellites length = {len(all_satellites)}")
-                    print(f"[Backend] DEBUG: First 3 IDs in all_satellites: {[s.id for s in all_satellites[:3]]}")
-                    print(f"[Backend] DEBUG: Last 3 IDs in all_satellites: {[s.id for s in all_satellites[-3:]]}")
                 
                 # CRITICAL: Create SimState with full list directly
                 # Use global to ensure we're modifying the right variable
@@ -1048,36 +999,19 @@ async def update_simulation():
                     events=events,
                 )
                 
-                # ALWAYS check and fix truncation - Pydantic may be silently truncating
+                # Store raw satellites list to bypass Pydantic truncation
                 actual_sat_count = len(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else 0
-                # Always log, not just on tick 1
-                if control["tick"] <= 5 or control["tick"] % 60 == 0:
-                    print(f"[Backend] ALWAYS (tick {control['tick']}): After SimState creation, all_satellites has {len(all_satellites)} items, sim_state.satellites has {actual_sat_count} items")
                 if actual_sat_count != len(all_satellites):
-                    print(f"[Backend] CRITICAL ERROR: SimState truncated! all_satellites has {len(all_satellites)}, sim_state.satellites has {actual_sat_count}")
                     # BYPASS PYDANTIC: Store raw list in a non-Pydantic attribute
                     object.__setattr__(sim_state, '_raw_satellites', list(all_satellites))
                     # Also try to fix the Pydantic field
                     try:
                         object.__setattr__(sim_state, 'satellites', list(all_satellites))
-                        actual_sat_count = len(sim_state.satellites)
                     except:
                         pass
-                    if actual_sat_count != len(all_satellites):
-                        try:
-                            sim_state.__dict__['satellites'] = list(all_satellites)
-                            actual_sat_count = len(sim_state.satellites)
-                        except:
-                            pass
-                    print(f"[Backend] CRITICAL FIX: After fixes, sim_state.satellites has {actual_sat_count} items (target: {len(all_satellites)}). Stored {len(all_satellites)} in _raw_satellites")
                 else:
                     # Even if not truncated, store raw list for get_state to use
                     object.__setattr__(sim_state, '_raw_satellites', list(all_satellites))
-                
-                if control["tick"] == 1:
-                    print(f"[Backend] CRITICAL: sim_state.satellites length after creation = {len(sim_state.satellites)}")
-                    print(f"[Backend] CRITICAL: First 3 IDs in sim_state.satellites: {[s.id for s in sim_state.satellites[:3]] if len(sim_state.satellites) > 0 else 'N/A'}")
-                    print(f"[Backend] CRITICAL: Last 3 IDs in sim_state.satellites: {[s.id for s in sim_state.satellites[-3:]] if len(sim_state.satellites) > 0 else 'N/A'}")
 
                 control["tick"] += 1
 
@@ -1250,7 +1184,6 @@ def clear_state_cache():
     global _state_cache, _cache_tick
     _state_cache = None
     _cache_tick = -1
-    print("[startup] Cleared state cache")
 
 @app.get("/state")  # Removed response_model to avoid Pydantic truncation
 async def get_state(mode: str = "simulator"):
@@ -1270,12 +1203,6 @@ async def get_state(mode: str = "simulator"):
         if sim_state is None:
             raise HTTPException(status_code=503, detail="Simulation not initialized")
         
-        # CRITICAL DEBUG: Check sim_state.satellites length before any caching
-        sim_sat_len = len(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else 0
-        print(f"[get_state] CRITICAL: sim_state.satellites has {sim_sat_len} items before cache check")
-        if sim_sat_len == 20:
-            print(f"[get_state] CRITICAL: sim_state.satellites only has 20 items! This is the root cause!")
-            print(f"[get_state] CRITICAL: First 3 IDs: {[s.id for s in sim_state.satellites[:3]] if sim_sat_len > 0 else 'N/A'}")
         
         # Use cached state if available and tick hasn't changed
         # For sandbox mode, cache more aggressively (every 5 ticks) to reduce load
@@ -1298,125 +1225,8 @@ async def get_state(mode: str = "simulator"):
                 return JSONResponse(content=return_dict)
         
         # Store mode in sim_state for use in calculations
-        # Force a fresh copy to avoid any caching issues
-        # CRITICAL: Ensure we use the full satellites list, not a truncated version
-        # First, check what sim_state.satellites actually contains
-        try:
-            sim_sat_iter = iter(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else iter([])
-            sim_sat_list_full = list(sim_sat_iter)
-            sim_sat_len_actual = len(sim_sat_list_full)
-        except Exception as e:
-            print(f"[get_state] ERROR: Could not iterate sim_state.satellites: {e}")
-            sim_sat_list_full = []
-            sim_sat_len_actual = 0
-        
-        # Also try len() directly
-        sim_sat_len_direct = len(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else 0
-        
-        print(f"[get_state] CRITICAL DEBUG: sim_state.satellites len() = {sim_sat_len_direct}, list() length = {sim_sat_len_actual}")
-        
-        # Use the longer of the two (in case one is truncated)
-        satellites_list = sim_sat_list_full if sim_sat_len_actual > sim_sat_len_direct else (list(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else [])
-        
-        if len(satellites_list) == 20:
-            print(f"[get_state] CRITICAL: satellites_list has exactly 20 items! This is the bug!")
-            print(f"[get_state] CRITICAL: sim_state.satellites type: {type(sim_state.satellites)}")
-            print(f"[get_state] CRITICAL: Trying to access all items directly...")
-            # Try to get all items by accessing the underlying data
-            if hasattr(sim_state, '__dict__'):
-                print(f"[get_state] CRITICAL: sim_state.__dict__ keys: {list(sim_state.__dict__.keys())}")
-                if 'satellites' in sim_state.__dict__:
-                    raw_sats = sim_state.__dict__['satellites']
-                    print(f"[get_state] CRITICAL: raw satellites from __dict__ type: {type(raw_sats)}, length: {len(raw_sats) if hasattr(raw_sats, '__len__') else 'N/A'}")
-                    if hasattr(raw_sats, '__len__') and len(raw_sats) > 20:
-                        satellites_list = list(raw_sats)
-                        print(f"[get_state] CRITICAL FIX: Using raw satellites from __dict__, now have {len(satellites_list)} items")
-        
-        print(f"[get_state] CRITICAL: Using {len(satellites_list)} satellites for response")
-        
-        # CRITICAL: Check if creating a new SimState truncates the list
-        print(f"[get_state] CRITICAL: About to create SimState with {len(satellites_list)} satellites")
-        state = SimState(
-            time=sim_state.time,
-            satellites=satellites_list,  # Use the full list directly
-            groundSites=sim_state.groundSites,
-            workload=sim_state.workload,
-            metrics=sim_state.metrics,
-            events=sim_state.events,
-        )
-        state_sat_count_after = len(state.satellites) if hasattr(state, 'satellites') and state.satellites else 0
-        print(f"[get_state] CRITICAL: After SimState creation, state.satellites has {state_sat_count_after} items")
-        if state_sat_count_after != len(satellites_list):
-            print(f"[get_state] CRITICAL ERROR: SimState creation truncated satellites! Input had {len(satellites_list)}, output has {state_sat_count_after}")
-            # Force fix using __setattr__
-            object.__setattr__(state, 'satellites', list(satellites_list))
-            print(f"[get_state] CRITICAL FIX: Fixed state.satellites, now has {len(state.satellites)} items")
-        
-        state._mode = mode  # Store mode for calculations
-        
-        # Return all processed satellites (no limit) - GPU optimizations allow full dataset
-        # Removed limit for sandbox mode
-        # state.satellites already contains all processed satellites - return all of them
-        
-        # Calculate response size for debugging
-        import json
-        try:
-            sim_sat_count = len(sim_state.satellites) if hasattr(sim_state, 'satellites') and sim_state.satellites else 0
-            sat_count = len(state.satellites) if hasattr(state, 'satellites') and state.satellites else 0
-            print(f"[get_state] DEBUG: sim_state.satellites length = {sim_sat_count}")
-            print(f"[get_state] DEBUG: state.satellites length = {sat_count}")
-            print(f"[get_state] DEBUG: First 3 satellite IDs in sim_state: {[s.id for s in sim_state.satellites[:3]] if sim_sat_count > 0 else 'N/A'}")
-            print(f"[get_state] DEBUG: First 3 satellite IDs in state: {[s.id for s in state.satellites[:3]] if sat_count > 0 else 'N/A'}")
-            if sat_count != sim_sat_count:
-                print(f"[get_state] WARNING: Satellite count mismatch! sim_state has {sim_sat_count}, state has {sat_count}")
-            # Check if state.satellites is actually a truncated list
-            if sat_count == 20 and sim_sat_count > 20:
-                print(f"[get_state] ERROR: State has only {sat_count} satellites but sim_state has {sim_sat_count}! This is a bug!")
-                print(f"[get_state] ERROR: Checking if sim_state.satellites is actually truncated...")
-                # Check if sim_state.satellites is actually truncated
-                actual_sim_count = len(list(sim_state.satellites)) if hasattr(sim_state.satellites, '__iter__') else 0
-                print(f"[get_state] ERROR: Actual iterable count of sim_state.satellites: {actual_sim_count}")
-                # Force use sim_state.satellites directly by creating a new list
-                state.satellites = list(sim_state.satellites)
-                sat_count = len(state.satellites)
-                print(f"[get_state] FIXED: Now state.satellites has {sat_count} satellites after forcing list conversion")
-            response_size = len(json.dumps(state.dict() if hasattr(state, 'dict') else state.__dict__))
-            elapsed = time.time() - start_time
-            print(f"[get_state] Generated new state (mode={mode}, tick={control['tick']}, sats={sat_count}, size={response_size/1024:.1f}KB, {elapsed:.3f}s)")
-        except Exception as e:
-            print(f"[get_state] Error in debug logging: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        # CRITICAL: Always use global all_satellites_global to avoid truncation
-        global all_satellites_global
-        global_sat_count = len(all_satellites_global) if all_satellites_global else 0
-        state_sat_count = len(state.satellites) if hasattr(state, 'satellites') and state.satellites else 0
-        print(f"[get_state] FINAL CHECK: state.satellites has {state_sat_count} items, all_satellites_global has {global_sat_count} items")
-        
-        # ALWAYS use global if available and has more than 20
-        if global_sat_count > 20:
-            print(f"[get_state] CRITICAL: Using all_satellites_global ({global_sat_count} items) for response")
-            # Replace satellites in state with global list using __setattr__
-            object.__setattr__(state, 'satellites', list(all_satellites_global))
-            final_sat_count = len(state.satellites)
-            print(f"[get_state] CRITICAL FIX: Replaced state.satellites with global, now has {final_sat_count} satellites")
-        else:
-            final_sat_count = state_sat_count
-            if final_sat_count <= 20:
-                print(f"[get_state] WARNING: Only {final_sat_count} satellites available (global has {global_sat_count})")
-        
-        # Cache the response
-        cache_sat_count = len(state.satellites) if hasattr(state, 'satellites') and state.satellites else 0
-        print(f"[get_state] Caching state with {cache_sat_count} satellites (tick {control['tick']})")
-        if cache_sat_count == 20:
-            print(f"[get_state] WARNING: Caching state with only 20 satellites! This will cause all future responses to have only 20 satellites!")
-        _state_cache = state
-        _cache_tick = control["tick"]
-        
-        # Final verification before return
-        return_sat_count = len(state.satellites) if hasattr(state, 'satellites') and state.satellites else 0
-        print(f"[get_state] RETURNING: state.satellites has {return_sat_count} items")
+        state = sim_state
+        state._mode = mode
         
         # Return as dict, ensuring satellites list is not truncated
         from fastapi.responses import JSONResponse
@@ -1434,16 +1244,14 @@ async def get_state(mode: str = "simulator"):
         }
         
         # Use _raw_satellites if available (bypasses Pydantic), otherwise use global, otherwise use state
+        global all_satellites_global
         satellites_to_return = None
         if hasattr(sim_state, '_raw_satellites') and sim_state._raw_satellites and len(sim_state._raw_satellites) > 20:
             satellites_to_return = sim_state._raw_satellites
-            print(f"[get_state] Using _raw_satellites: {len(satellites_to_return)} items")
-        elif global_sat_count > 20:
+        elif all_satellites_global and len(all_satellites_global) > 20:
             satellites_to_return = all_satellites_global
-            print(f"[get_state] Using all_satellites_global: {len(satellites_to_return)} items")
         else:
             satellites_to_return = state.satellites if hasattr(state, 'satellites') and state.satellites else []
-            print(f"[get_state] Using state.satellites: {len(satellites_to_return)} items")
         
         # Convert satellites to dicts in batches
         if len(satellites_to_return) > 100:
@@ -1457,9 +1265,6 @@ async def get_state(mode: str = "simulator"):
             return_dict['satellites'] = converted_sats
         else:
             return_dict['satellites'] = [s.dict() if hasattr(s, 'dict') else s.__dict__ for s in satellites_to_return]
-        
-        final_dict_sat_count = len(return_dict['satellites'])
-        print(f"[get_state] FINAL: Returning {final_dict_sat_count} satellites in response")
         
         # Final yield before returning
         await asyncio.sleep(0)
