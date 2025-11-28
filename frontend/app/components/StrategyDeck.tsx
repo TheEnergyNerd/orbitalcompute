@@ -36,6 +36,9 @@ export default function StrategyDeck() {
 
   const { isTutorialActive, tutorialStep } = useSandboxStore();
   
+  // Mobile menu state
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  
   // Accordion state - all collapsed by default
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     orbit: false,

@@ -117,7 +117,7 @@ export default function SandboxControls() {
         onClick={() => setBuildPanelOpen(true)}
         disabled={isDeployDisabled}
         data-tutorial-target="build-panel-button"
-        className={`sm:hidden fixed bottom-20 right-4 z-50 w-16 h-16 bg-accent-blue hover:bg-accent-blue/80 text-dark-bg rounded-full font-semibold text-2xl transition-all shadow-lg flex items-center justify-center ${
+        className={`sm:hidden fixed bottom-24 right-4 z-50 w-14 h-14 bg-accent-blue hover:bg-accent-blue/80 text-dark-bg rounded-full font-semibold text-xl transition-all shadow-lg flex items-center justify-center ${
           shouldHighlightDeployButton 
             ? 'ring-4 ring-accent-blue ring-offset-2 ring-offset-dark-bg animate-pulse' 
             : ''
