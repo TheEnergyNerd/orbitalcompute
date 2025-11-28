@@ -11,7 +11,7 @@ export default function SandboxModeSwitcher() {
   }
   
   return (
-    <div className="fixed top-[70px] left-[340px] z-[99] flex gap-2 max-w-[calc(100vw-12px)]">
+    <div className="fixed top-2 left-2 sm:top-[70px] sm:left-[340px] z-[99] flex gap-2 max-w-[calc(100vw-12px)]">
       <button
         onClick={() => setSandboxMode("freeplay")}
         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
