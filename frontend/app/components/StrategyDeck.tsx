@@ -416,6 +416,17 @@ export default function StrategyDeck() {
           </div>
         </div>
       )}
+      
+      {/* Mobile: Close button */}
+      {isMobileOpen && (
+        <button
+          onClick={() => setIsMobileOpen(false)}
+          className="sm:hidden absolute top-2 right-2 text-gray-400 hover:text-white z-50"
+        >
+          ✕
+        </button>
+      )}
     </div>
+    </>
   );
 }
