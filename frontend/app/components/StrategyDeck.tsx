@@ -87,8 +87,30 @@ export default function StrategyDeck() {
   const debrisRisk = densityMode === "Aggressive" ? "HIGH" : densityMode === "Optimized" ? "MED" : "LOW";
   const energyCostMultiplier: number = 1.0;
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
   return (
-    <div className="hidden sm:block fixed top-6 left-6 z-40 panel-glass rounded-xl p-4 w-80 max-w-[calc(100vw-12px)] shadow-2xl border border-white/10" data-tutorial-target="strategy-deck">
+    <>
+      {/* Mobile: Hamburger menu button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="sm:hidden fixed top-2 left-2 z-50 w-12 h-12 bg-gray-800/90 hover:bg-gray-700/90 rounded-lg flex items-center justify-center shadow-lg border border-white/10"
+      >
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile: Overlay when menu is open */}
+      {isMobileOpen && (
+        <div 
+          className="sm:hidden fixed inset-0 bg-black/50 z-[45]"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Strategy Deck: Hidden on mobile unless menu is open */}
+      <div className={`${isMobileOpen ? 'block' : 'hidden'} sm:block fixed top-6 left-6 z-40 panel-glass rounded-xl p-4 w-80 max-w-[calc(100vw-12px)] shadow-2xl border border-white/10`} data-tutorial-target="strategy-deck">
       <h3 className="text-sm font-bold text-accent-blue mb-4 uppercase tracking-wide">Strategy Deck</h3>
 
       {/* SECTION 1: Orbit Architecture (Accordion) */}
