@@ -81,7 +81,7 @@ export default function SunClock({ appMode = "simulator" }: { appMode?: "simulat
     : 0;
 
   return (
-    <div className="fixed top-6 right-6 z-30 panel-glass rounded-xl p-3 sm:p-5 shadow-2xl border border-white/10 w-64 sm:min-w-[280px] max-w-[calc(100vw-12px)]">
+    <div className="hidden sm:block fixed top-6 right-6 z-30 panel-glass rounded-xl p-3 sm:p-5 shadow-2xl border border-white/10 w-64 sm:min-w-[280px] max-w-[calc(100vw-12px)]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-accent-blue">Sun Clock</h3>
         <div className="text-2xl">☀️</div>

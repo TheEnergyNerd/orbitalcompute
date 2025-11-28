@@ -281,33 +281,33 @@ export default function SimulationFeedback() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-30 px-2 sm:px-0" data-tutorial-target="metrics">
-      <div className="panel-glass rounded-t-xl sm:rounded-xl p-2 sm:p-4 shadow-2xl border border-white/10">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 overflow-x-auto">
+    <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-30 px-1 sm:px-0" data-tutorial-target="metrics">
+      <div className="panel-glass rounded-t-xl sm:rounded-xl p-1.5 sm:p-4 shadow-2xl border border-white/10">
+        <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 overflow-x-auto">
           {clusters.map((cluster) => (
             <div
               key={cluster.title}
-              className={`px-4 py-3 rounded-lg border-2 transition-all ${
+              className={`px-2 py-1.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all ${
                 cluster.isPulsing
                   ? "border-accent-blue bg-accent-blue/10 animate-pulse"
                   : "border-gray-700/50 bg-gray-800/30"
               }`}
             >
-              <div className="text-xs font-semibold text-gray-400 mb-1 sm:mb-2 uppercase tracking-wide">
+              <div className="text-[9px] sm:text-xs font-semibold text-gray-400 mb-0.5 sm:mb-2 uppercase tracking-wide">
                 {cluster.title}
               </div>
-              <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+              <div className="flex flex-wrap sm:flex-row gap-1 sm:gap-4">
                 {cluster.metrics.map((metric) => (
-                  <div key={metric.label} className="min-w-[100px]">
-                    <div className="text-xs text-gray-500 mb-1">{metric.label}</div>
-                    <div className="flex items-baseline gap-1">
-                      <div className="text-lg font-bold text-white">
+                  <div key={metric.label} className="min-w-[70px] sm:min-w-[100px]">
+                    <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">{metric.label}</div>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1">
+                      <div className="text-sm sm:text-lg font-bold text-white">
                         {formatValue(metric.value, metric.unit)}
                       </div>
-                      {metric.unit && <div className="text-xs text-gray-500">{metric.unit}</div>}
+                      {metric.unit && <div className="text-[9px] sm:text-xs text-gray-500">{metric.unit}</div>}
                     </div>
                     {Math.abs(metric.delta) > 0.1 && (
-                      <div className={`flex items-center gap-1 text-xs mt-1 ${
+                      <div className={`flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs mt-0.5 sm:mt-1 ${
                         metric.delta < 0 ? "text-green-400" : "text-red-400"
                       }`}>
                         <span>{metric.delta < 0 ? "↓" : "↑"}</span>
