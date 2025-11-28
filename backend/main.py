@@ -292,6 +292,7 @@ async def fetch_tles():
                 lines = text.split("\n")
                 sats = []
                 raw_tle_text = []
+                parse_errors = 0
                 for i in range(0, len(lines) - 1, 3):
                     if i + 2 < len(lines):
                         name = lines[i].strip()
@@ -306,8 +307,13 @@ async def fetch_tles():
                                 raw_tle_text.append(line1)
                                 raw_tle_text.append(line2)
                             except Exception as e:
-                                print(f"[fetch_tles] Error parsing satellite {name}: {e}")
+                                parse_errors += 1
+                                if parse_errors <= 5:  # Log first 5 parse errors
+                                    print(f"[fetch_tles] Error parsing satellite {name}: {e}")
                                 continue
+                
+                if parse_errors > 0:
+                    print(f"[fetch_tles] Warning: {parse_errors} satellites failed to parse (total parsed: {len(sats)})")
                 
                 if len(sats) > 0:
                     # Save to cache
@@ -321,7 +327,11 @@ async def fetch_tles():
                     print(f"[fetch_tles] SUCCESS: Loaded {len(sats)} Starlink satellites from {url} (expected 8000-9000)")
                     if len(sats) < 7000:
                         print(f"[fetch_tles] WARNING: Only got {len(sats)} satellites, expected 8000-9000. May be incomplete.")
+                    else:
+                        print(f"[fetch_tles] EXCELLENT: Got {len(sats)} satellites from CelesTrak - this is the full dataset!")
                     return sats
+                else:
+                    print(f"[fetch_tles] WARNING: Parsed 0 satellites from {url}. Response length: {len(text)} chars, lines: {len(lines)}")
                 else:
                     print(f"[fetch_tles] No valid satellites found in response from {url}")
             except Exception as e:
