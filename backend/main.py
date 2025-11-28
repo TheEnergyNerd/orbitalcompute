@@ -26,14 +26,26 @@ app = FastAPI(title="Orbital Compute Control Room API")
 
 # CORS middleware
 # Allow all origins in production (you can restrict this to specific domains)
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "*")
+if ALLOWED_ORIGINS_STR == "*":
+    # Allow all origins (for production/public APIs)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,  # Must be False when allow_origins=["*"]
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Allow specific origins
+    ALLOWED_ORIGINS = ALLOWED_ORIGINS_STR.split(",")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Compression middleware for large responses
 app.add_middleware(GZipMiddleware, minimum_size=1000)
