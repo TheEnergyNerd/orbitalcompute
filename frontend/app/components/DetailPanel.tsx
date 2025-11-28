@@ -92,8 +92,27 @@ export default function DetailPanel() {
   }
 
   if (selectedEntity.type === "satellite") {
-    const sat = state.satellites.find((s) => s.id === selectedEntity.id);
-    if (!sat) return null;
+    // Try multiple ID formats to find the satellite
+    let sat = state.satellites.find((s) => s.id === selectedEntity.id);
+    if (!sat) {
+      // Try with sat_ prefix
+      sat = state.satellites.find((s) => s.id === `sat_${selectedEntity.id}`);
+    }
+    if (!sat) {
+      // Try without sat_ prefix
+      sat = state.satellites.find((s) => s.id === selectedEntity.id.replace(/^sat_/, ""));
+    }
+    if (!sat) {
+      console.warn("[DetailPanel] Could not find satellite with ID:", selectedEntity.id, "Available satellites:", state.satellites.length);
+      // Show a placeholder card even if satellite not found
+      return (
+        <div className="fixed bottom-6 left-6 panel-glass rounded-2xl p-5 w-72 sm:w-80 max-w-[calc(100vw-12px)] z-[120] shadow-2xl border border-white/10">
+          <div className="text-xs uppercase text-gray-400 tracking-[0.2em] mb-1">Orbital Node</div>
+          <h2 className="text-2xl font-semibold text-white mb-4">{selectedEntity.id}</h2>
+          <div className="text-sm text-gray-400">Satellite data loading...</div>
+        </div>
+      );
+    }
 
     return (
       <div className="fixed bottom-6 left-6 panel-glass rounded-2xl p-5 w-72 sm:w-80 max-w-[calc(100vw-12px)] z-[120] shadow-2xl border border-white/10">

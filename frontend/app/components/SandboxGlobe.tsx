@@ -1148,9 +1148,23 @@ export default function SandboxGlobe({ viewerRef }: { viewerRef?: React.MutableR
         }
         
         // Regular satellite from backend
-        const satellite = state.satellites.find((s) => s.id === satId);
+        // Try multiple ID formats to find the satellite
+        let satellite = state.satellites.find((s) => s.id === satId);
+        if (!satellite) {
+          // Try with sat_ prefix
+          satellite = state.satellites.find((s) => s.id === `sat_${satId}`);
+        }
+        if (!satellite) {
+          // Try without sat_ prefix
+          satellite = state.satellites.find((s) => s.id === satId.replace(/^sat_/, ""));
+        }
+        if (!satellite && rawId) {
+          // Try with rawId
+          satellite = state.satellites.find((s) => s.id === rawId || s.id === rawId.replace(/^sat_/, ""));
+        }
+        
         if (satellite) {
-          console.log("[SandboxGlobe] Zooming to satellite:", satellite.id);
+          console.log("[SandboxGlobe] Found satellite:", satellite.id, "Setting selectedEntity");
           setSelectedEntity({ type: "satellite", id: satellite.id });
           isFlying = true;
           const position = Cesium.Cartesian3.fromDegrees(satellite.lon, satellite.lat, satellite.alt_km * 1000);
@@ -1165,6 +1179,10 @@ export default function SandboxGlobe({ viewerRef }: { viewerRef?: React.MutableR
               isFlying = false;
             },
           });
+        } else {
+          console.warn("[SandboxGlobe] Could not find satellite with ID:", satId, "rawId:", rawId, "Available satellites:", state.satellites.length);
+          // Still set selectedEntity even if we can't find the satellite (DetailPanel will handle it)
+          setSelectedEntity({ type: "satellite", id: satId || rawId });
         }
         return;
       }

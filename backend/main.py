@@ -1071,9 +1071,12 @@ async def startup():
         satellites = await fetch_tles()
         print(f"[startup] Loaded {len(satellites)} satellites from TLE fetch")
         if len(satellites) == 0:
+            print(f"[startup] ERROR: No satellites loaded from CelesTrak. Will create fallback satellites.")
             raise Exception("No satellites loaded from CelesTrak")
         if len(satellites) < 100:
-            print(f"[startup] WARNING: Only {len(satellites)} satellites loaded from CelesTrak. This is less than expected.")
+            print(f"[startup] WARNING: Only {len(satellites)} satellites loaded from CelesTrak. This is less than expected (should be 8000-9000).")
+        else:
+            print(f"[startup] SUCCESS: Loaded {len(satellites)} satellites from CelesTrak (expected 8000-9000 for Starlink)")
     except Exception as e:
         print(f"[startup] Error fetching TLEs: {e}")
         print(f"[startup] Will retry CelesTrak fetch...")
