@@ -110,8 +110,8 @@ export default function StrategyDeck() {
         />
       )}
 
-      {/* Strategy Deck: Hidden on mobile unless menu is open */}
-      <div className={`${isMobileOpen ? 'block' : 'hidden'} sm:block fixed top-6 left-6 z-40 panel-glass rounded-xl p-4 w-80 max-w-[calc(100vw-12px)] shadow-2xl border border-white/10`} data-tutorial-target="strategy-deck">
+      {/* Strategy Deck: Hidden on mobile unless menu is open, always visible on desktop */}
+      <div className={`${isMobileOpen ? 'block' : 'hidden'} sm:!block fixed top-6 left-6 z-40 panel-glass rounded-xl p-4 w-80 max-w-[calc(100vw-12px)] shadow-2xl border border-white/10`} data-tutorial-target="strategy-deck">
       <h3 className="text-sm font-bold text-accent-blue mb-4 uppercase tracking-wide">Strategy Deck</h3>
 
       {/* SECTION 1: Orbit Architecture (Accordion) */}
