@@ -90,8 +90,6 @@ export default function StrategyDeck() {
   const debrisRisk = densityMode === "Aggressive" ? "HIGH" : densityMode === "Optimized" ? "MED" : "LOW";
   const energyCostMultiplier: number = 1.0;
 
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
   return (
     <>
       {/* Mobile: Hamburger menu button */}
