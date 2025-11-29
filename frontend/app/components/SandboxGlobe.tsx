@@ -86,7 +86,7 @@ export default function SandboxGlobe({ viewerRef }: { viewerRef?: React.MutableR
   const internalViewerRef = useRef<Cesium.Viewer | null>(null);
   const actualViewerRef = viewerRef || internalViewerRef;
   const state = useSimStore((s) => s.state);
-  const { orbitalComputeUnits, groundDCReduction, isMostlySpaceMode } = useSandboxStore();
+  const { orbitalComputeUnits, groundDCReduction, isMostlySpaceMode, simState } = useSandboxStore();
   const { getDeployedUnits } = useOrbitalUnitsStore();
   const jobFlowRef = useRef<Cesium.Entity[]>([]);
   const pulseIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1230,6 +1230,63 @@ export default function SandboxGlobe({ viewerRef }: { viewerRef?: React.MutableR
       handler.destroy();
     };
   }, [actualViewerRef, state]);
+
+  // Launch arc visuals
+  useEffect(() => {
+    const viewer = actualViewerRef.current || getGlobalViewer();
+    if (!viewer || viewer.isDestroyed() || !simState) return;
+    const entities = viewer.entities;
+
+    // Clean up old launch arcs
+    launchArcsRef.current.forEach(arc => {
+      try {
+        entities.remove(arc);
+      } catch (e) {
+        // Arc already removed
+      }
+    });
+    launchArcsRef.current = [];
+
+    // Check for new launches
+    const currentLaunchCount = Math.floor(simState.resources.launches?.buffer ?? 0);
+    if (currentLaunchCount > lastLaunchCountRef.current && lastLaunchCountRef.current > 0) {
+      // Create launch arc from a random ground location to orbit
+      const launchLat = -28.5 + (Math.random() - 0.5) * 10; // Near typical launch sites
+      const launchLon = -80.6 + (Math.random() - 0.5) * 10;
+      const orbitAlt = 550; // km
+      
+      const startPos = Cesium.Cartesian3.fromDegrees(launchLon, launchLat, 0);
+      const endPos = Cesium.Cartesian3.fromDegrees(launchLon, launchLat, orbitAlt * 1000);
+      
+      const arc = entities.add({
+        id: `launch_arc_${Date.now()}_${Math.random()}`,
+        polyline: {
+          positions: [startPos, endPos],
+          width: 3,
+          material: new Cesium.PolylineGlowMaterialProperty({
+            glowPower: 0.2,
+            color: Cesium.Color.fromCssColorString("#00d4ff").withAlpha(0.8),
+          }),
+        },
+      });
+      
+      launchArcsRef.current.push(arc);
+      
+      // Fade out and remove after 3-5 minutes
+      setTimeout(() => {
+        if (arc && !viewer.isDestroyed()) {
+          try {
+            entities.remove(arc);
+            launchArcsRef.current = launchArcsRef.current.filter(a => a !== arc);
+          } catch (e) {
+            // Already removed
+          }
+        }
+      }, 180000); // 3 minutes
+    }
+    
+    lastLaunchCountRef.current = currentLaunchCount;
+  }, [actualViewerRef, simState]);
 
   return (
     <>

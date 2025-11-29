@@ -13,8 +13,11 @@ export default function KpiBar() {
   } = useSandboxStore();
   const state = useSimStore((s) => s.state);
 
-  // Calculate metrics
-  const orbitPods = Math.floor(factory.inventory.orbitPods ?? 0); // Pods must be whole numbers
+  // Calculate metrics - use new sim state if available, fallback to old factory
+  const simState = useSandboxStore((s) => s.simState);
+  const orbitPods = simState 
+    ? Math.floor(simState.resources.launches?.buffer ?? 0)
+    : Math.floor(factory.inventory.orbitPods ?? 0); // Pods must be whole numbers
   const orbitalCapacityMW = orbitPods * 0.15; // 150kW per pod
   const BASE_GROUND_CAPACITY_GW = 42;
   const baseGroundCapacityMW = BASE_GROUND_CAPACITY_GW * 1000;
