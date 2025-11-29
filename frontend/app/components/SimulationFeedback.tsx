@@ -362,9 +362,9 @@ export default function SimulationFeedback() {
                     )}
                     {metric.label === "Factory P/L" && (
                       <div className={`text-[9px] sm:text-xs mt-0.5 sm:mt-1 ${
-                        factoryCash >= 0 ? "text-green-400" : "text-red-400"
+                        (factory.inventory.cash ?? 0) >= 0 ? "text-green-400" : "text-red-400"
                       }`}>
-                        Cash: ${formatValue(factoryCash, "$M")}
+                        Cash: ${formatValue(factory.inventory.cash ?? 0, "$M")}
                       </div>
                     )}
                   </div>
