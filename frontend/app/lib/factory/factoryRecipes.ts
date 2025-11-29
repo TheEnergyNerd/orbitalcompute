@@ -160,7 +160,14 @@ export function runFactoryTick(
       const produced = (recipe.output[resourceKey] ?? 0) * lines * monthFraction;
       // Only add if we have enough inputs (scale down if needed)
       const scaleFactor = maxPossibleOutput > 0 ? actualOutput / maxPossibleOutput : 0;
-      next.inventory[resourceKey] = (next.inventory[resourceKey] ?? 0) + produced * scaleFactor;
+      const amountToAdd = produced * scaleFactor;
+      
+      // For discrete resources (pods, orbitPods), round to nearest integer
+      if (resourceKey === 'pods' || resourceKey === 'orbitPods') {
+        next.inventory[resourceKey] = (next.inventory[resourceKey] ?? 0) + Math.round(amountToAdd);
+      } else {
+        next.inventory[resourceKey] = (next.inventory[resourceKey] ?? 0) + amountToAdd;
+      }
     });
 
     // Update buffers (current inventory levels)

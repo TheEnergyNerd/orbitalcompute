@@ -411,7 +411,7 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
       if (podsLaunched > 0) {
         updatedFactory.inventory.pods = Math.max(0, (updatedFactory.inventory.pods ?? 0) - podsLaunched);
         updatedFactory.inventory.fuel = Math.max(0, (updatedFactory.inventory.fuel ?? 0) - podsLaunched * 10);
-        updatedFactory.inventory.orbitPods = (updatedFactory.inventory.orbitPods ?? 0) + podsLaunched;
+        updatedFactory.inventory.orbitPods = Math.floor((updatedFactory.inventory.orbitPods ?? 0) + podsLaunched);
       }
       
       // Compute bottlenecks

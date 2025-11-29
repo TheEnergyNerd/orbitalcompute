@@ -14,7 +14,7 @@ export default function KpiBar() {
   const state = useSimStore((s) => s.state);
 
   // Calculate metrics
-  const orbitPods = factory.inventory.orbitPods ?? 0;
+  const orbitPods = Math.floor(factory.inventory.orbitPods ?? 0); // Pods must be whole numbers
   const orbitalCapacityMW = orbitPods * 0.15; // 150kW per pod
   const BASE_GROUND_CAPACITY_GW = 42;
   const baseGroundCapacityMW = BASE_GROUND_CAPACITY_GW * 1000;

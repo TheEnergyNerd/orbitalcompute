@@ -11,7 +11,7 @@ export default function LaunchQueuePanel() {
   const [showLaunchAnimation, setShowLaunchAnimation] = useState(false);
 
   const deploymentRate = calculateDeploymentRate(launchState);
-  const orbitPods = factory.inventory.orbitPods ?? 0;
+  const orbitPods = Math.floor(factory.inventory.orbitPods ?? 0); // Pods must be whole numbers
   const nextLaunch = launchState.queue.length > 0 ? launchState.queue[0].etaMonths : null;
 
   // Detect when pods are launched (orbitPods increases)

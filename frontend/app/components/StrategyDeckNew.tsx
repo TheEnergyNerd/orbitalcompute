@@ -29,7 +29,7 @@ export default function StrategyDeckNew() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Calculate metrics for display
-  const orbitPods = factory.inventory.orbitPods ?? 0;
+  const orbitPods = Math.floor(factory.inventory.orbitPods ?? 0); // Pods must be whole numbers
   const orbitalCapacityMW = orbitPods * 0.15; // 150kW per pod
   const BASE_GROUND_CAPACITY_GW = 42;
   const baseGroundCapacityMW = BASE_GROUND_CAPACITY_GW * 1000;
@@ -327,11 +327,11 @@ export default function StrategyDeckNew() {
               <div className="space-y-1.5 text-xs text-gray-400">
                 <div className="flex justify-between">
                   <span>Pods in Orbit:</span>
-                  <span className="text-white font-semibold">{orbitPods}</span>
+                  <span className="text-white font-semibold">{Math.floor(orbitPods)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Built:</span>
-                  <span className="text-white font-semibold">{orbitPods}</span>
+                  <span className="text-white font-semibold">{Math.floor(orbitPods)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Orbital Capacity:</span>
