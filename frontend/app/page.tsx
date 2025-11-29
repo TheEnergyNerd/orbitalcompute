@@ -75,8 +75,6 @@ export default function Home() {
           <KpiBar />
           <SandboxVisualizations />
           <NewTutorial />
-          <DeploymentQueue />
-          <DeploymentTimeDisplay />
           <DetailPanel />
         </>
       )}
