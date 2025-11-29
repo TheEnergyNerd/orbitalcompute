@@ -8,11 +8,20 @@ import FactoryView from "./factory/FactoryView";
 
 type Mode = "factory" | "orbit" | "missions";
 
-export default function LeftPanel() {
+interface LeftPanelProps {
+  selectedNodeId?: string | null;
+  onSelectNode?: (nodeId: string | null) => void;
+}
+
+export default function LeftPanel({ selectedNodeId: propSelectedNodeId, onSelectNode: propOnSelectNode }: LeftPanelProps = {}) {
   const { simState, updateMachineLines, orbitMode, setOrbitMode, unlockedOrbitModes } = useSandboxStore();
   const [activeMode, setActiveMode] = useState<Mode>("factory");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [internalSelectedNode, setInternalSelectedNode] = useState<string | null>(null);
+  
+  // Use prop if provided, otherwise use internal state
+  const selectedNodeId = propSelectedNodeId !== undefined ? propSelectedNodeId : internalSelectedNode;
+  const onSelectNode = propOnSelectNode || setInternalSelectedNode;
 
   if (!simState) {
     return <div className="text-xs text-gray-500">Loading simulation state...</div>;
