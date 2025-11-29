@@ -61,16 +61,14 @@ export default function Home() {
 
       {!loading && (
         <>
-          {/* Sun Clock - shows time and sunlit satellite stats */}
-          <SunClock appMode="sandbox" />
           <GlobePositionDebug viewerRef={viewerRef} />
           <ErrorPanel />
           <SandboxModeSwitcher />
           <LeftPanel />
           <SunClockSimplified />
-          <FactoryStrip />
           <TimeScaleControl />
           <KpiBar />
+          <FactoryView />
           <SandboxVisualizations />
           <NewTutorial />
           <DetailPanel />

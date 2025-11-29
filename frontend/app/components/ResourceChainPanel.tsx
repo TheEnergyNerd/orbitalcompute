@@ -20,7 +20,7 @@ function ResourceNode({ resourceId, name, units, buffer, prodPerMin, consPerMin,
   const hasProduction = prodPerMin > 0;
   
   return (
-    <div className={`p-3 rounded-lg border transition-all ${
+    <div className={`p-2 rounded border transition-all ${
       isBottleneck 
         ? bottleneckSeverity > 50 
           ? "bg-red-500/20 border-red-500/50 animate-pulse" 
@@ -29,53 +29,35 @@ function ResourceNode({ resourceId, name, units, buffer, prodPerMin, consPerMin,
           ? "bg-gray-800/50 border-gray-700" 
           : "bg-gray-800 border-gray-700"
     }`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm font-semibold ${
+      <div className="flex items-center justify-between mb-1">
+        <span className={`text-xs font-semibold ${
           isBottleneck ? "text-red-400" : "text-gray-300"
         }`}>
           {name}
         </span>
         {isBottleneck && (
-          <span className="text-xs px-2 py-0.5 rounded bg-red-500/30 text-red-300">
-            Bottleneck
+          <span className="text-[10px] px-1 py-0.5 rounded bg-red-500/30 text-red-300">
+            ⚠
           </span>
         )}
       </div>
       
-      <div className="space-y-1 text-xs">
+      <div className="space-y-0.5 text-[10px]">
         <div className="flex justify-between text-gray-400">
-          <span>Buffer:</span>
+          <span>Buf:</span>
           <span className="text-white font-mono">
             {formatSigFigs(buffer)} {units}
           </span>
         </div>
         {hasProduction && (
-          <>
-            <div className="flex justify-between text-gray-400">
-              <span>Production:</span>
-              <span className="text-green-400 font-mono">
-                +{formatSigFigs(prodPerMin)} {units}/min
-              </span>
-            </div>
-            <div className="flex justify-between text-gray-400">
-              <span>Consumption:</span>
-              <span className="text-red-400 font-mono">
-                -{formatSigFigs(consPerMin)} {units}/min
-              </span>
-            </div>
-            {hasProduction && (
-              <div className="mt-2 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${
-                    isBottleneck ? "bg-red-500" : "bg-green-500"
-                  }`}
-                  style={{
-                    width: `${Math.min(100, (prodPerMin / Math.max(prodPerMin, consPerMin)) * 100)}%`,
-                  }}
-                />
-              </div>
-            )}
-          </>
+          <div className="flex justify-between text-gray-400">
+            <span>Rate:</span>
+            <span className={`font-mono ${
+              isBottleneck ? "text-red-400" : "text-green-400"
+            }`}>
+              {formatSigFigs(prodPerMin - consPerMin, 1)}/min
+            </span>
+          </div>
         )}
       </div>
     </div>
@@ -177,9 +159,9 @@ export default function ResourceChainPanel() {
   const visibleResources = chainOrder.filter(id => resources[id]);
 
   return (
-    <div className="space-y-3">
-      <div className="text-xs font-semibold text-gray-300 mb-3 uppercase tracking-wide">
-        Production Chain
+    <div className="space-y-2">
+      <div className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wide">
+        Resources
       </div>
       
       {visibleResources.map((resourceId, index) => {
@@ -189,36 +171,18 @@ export default function ResourceChainPanel() {
         const isBottleneck = bottlenecks.has(resourceId);
         const bottleneckSeverity = bottlenecks.get(resourceId) ?? 0;
 
-        // Find flow edges that end at this resource
-        const incomingFlows = flows.filter(f => f.to === resourceId);
-
         return (
-          <div key={resourceId}>
-            {/* Show incoming flows */}
-            {incomingFlows.map(flow => {
-              const fromResource = resources[flow.from];
-              if (!fromResource) return null;
-              return (
-                <FlowArrow
-                  key={`${flow.from}-${flow.to}`}
-                  from={flow.from}
-                  to={flow.to}
-                  flowRate={fromResource.prodPerMin}
-                />
-              );
-            })}
-            
-            <ResourceNode
-              resourceId={resourceId}
-              name={resource.name}
-              units={resource.units}
-              buffer={resource.buffer}
-              prodPerMin={resource.prodPerMin}
-              consPerMin={resource.consPerMin}
-              isBottleneck={isBottleneck}
-              bottleneckSeverity={bottleneckSeverity}
-            />
-          </div>
+          <ResourceNode
+            key={resourceId}
+            resourceId={resourceId}
+            name={resource.name}
+            units={resource.units}
+            buffer={resource.buffer}
+            prodPerMin={resource.prodPerMin}
+            consPerMin={resource.consPerMin}
+            isBottleneck={isBottleneck}
+            bottleneckSeverity={bottleneckSeverity}
+          />
         );
       })}
     </div>

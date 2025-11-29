@@ -40,7 +40,7 @@ export default function LeftPanel() {
       )}
 
       <div
-        className={`fixed top-[70px] left-6 w-80 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10 ${
+        className={`fixed top-[70px] left-6 w-64 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10 ${
           isMobileOpen ? "block" : "hidden sm:block"
         }`}
       >
