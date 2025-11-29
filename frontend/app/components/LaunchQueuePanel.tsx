@@ -3,6 +3,7 @@
 import { useSandboxStore } from "../store/sandboxStore";
 import { calculateDeploymentRate } from "../lib/launch/launchQueue";
 import { useEffect, useState } from "react";
+import { formatSigFigs } from "../lib/utils/formatNumber";
 
 export default function LaunchQueuePanel() {
   const { launchState, factory } = useSandboxStore();
@@ -49,7 +50,7 @@ export default function LaunchQueuePanel() {
         </div>
         <div className="flex justify-between text-gray-400">
           <span>Deployment Rate:</span>
-          <span className="text-white font-semibold">{deploymentRate.toFixed(1)} pods/mo</span>
+          <span className="text-white font-semibold">{formatSigFigs(deploymentRate)} pods/mo</span>
         </div>
       </div>
     </div>

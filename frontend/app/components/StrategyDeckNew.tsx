@@ -8,6 +8,7 @@ import type { LaunchProviderId } from "../lib/launch/launchQueue";
 import { DEFAULT_LAUNCH_PROVIDERS, calculateDeploymentRate } from "../lib/launch/launchQueue";
 import { calculateMetrics } from "../lib/metrics/calculateMetrics";
 import MissionPanel from "./MissionPanel";
+import { formatSigFigs, formatDecimal } from "../lib/utils/formatNumber";
 
 type Tab = "orbit" | "factory" | "space" | "missions";
 
@@ -201,7 +202,7 @@ export default function StrategyDeckNew() {
               <div className="mt-2 text-xs text-gray-400 space-y-1">
                 <div className="flex justify-between">
                   <span>Deployment Rate:</span>
-                  <span className="text-white font-semibold">{deploymentRate.toFixed(2)} pods/mo</span>
+                  <span className="text-white font-semibold">{formatSigFigs(deploymentRate)} pods/mo</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Max Queue:</span>
@@ -262,7 +263,7 @@ export default function StrategyDeckNew() {
                           utilization > 0.95 ? "text-yellow-400" :
                           "text-green-400"
                         }`}>
-                          Util: {(utilization * 100).toFixed(0)}%
+                          Util: {formatDecimal(utilization * 100, 0)}%
                         </span>
                       </div>
                     </div>
@@ -309,7 +310,7 @@ export default function StrategyDeckNew() {
                         b.utilization > 95 ? "text-yellow-400" :
                         "text-green-400"
                       }`}>
-                        {b.utilization.toFixed(0)}%
+                        {formatDecimal(b.utilization, 0)}%
                       </span>
                     </div>
                   ))}
@@ -334,7 +335,7 @@ export default function StrategyDeckNew() {
                 </div>
                 <div className="flex justify-between">
                   <span>Orbital Capacity:</span>
-                  <span className="text-white font-semibold">{orbitalCapacityMW.toFixed(1)} MW</span>
+                  <span className="text-white font-semibold">{formatSigFigs(orbitalCapacityMW)} MW</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Orbit Density:</span>
@@ -367,18 +368,18 @@ export default function StrategyDeckNew() {
               <div className="space-y-1.5 text-xs text-gray-400">
                 <div className="flex justify-between">
                   <span>Launch Capacity:</span>
-                  <span className="text-white font-semibold">{deploymentRate.toFixed(1)} pods/mo</span>
+                  <span className="text-white font-semibold">{formatSigFigs(deploymentRate)} pods/mo</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Production Rate (pods):</span>
                   <span className="text-white font-semibold">
-                    {(factory.utilization.podFactory * (factory.lines.podFactory ?? 0) * 30).toFixed(1)} pods/mo
+                    {formatSigFigs((factory.utilization.podFactory ?? 0) * (factory.lines.podFactory ?? 0) * (30 / 8))} pods/mo
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Fuel Production:</span>
                   <span className="text-white font-semibold">
-                    {(factory.utilization.fuelDepot * (factory.lines.fuelDepot ?? 0) * 50).toFixed(0)} t/mo
+                    {formatDecimal((factory.utilization.fuelDepot ?? 0) * (factory.lines.fuelDepot ?? 0) * 50, 0)} t/mo
                   </span>
                 </div>
               </div>
@@ -389,15 +390,15 @@ export default function StrategyDeckNew() {
               <div className="space-y-1.5 text-xs text-gray-400">
                 <div className="flex justify-between">
                   <span>Ground Capacity:</span>
-                  <span className="text-white font-semibold">{BASE_GROUND_CAPACITY_GW.toFixed(1)} GW</span>
+                  <span className="text-white font-semibold">{formatSigFigs(BASE_GROUND_CAPACITY_GW)} GW</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Orbital Capacity:</span>
-                  <span className="text-white font-semibold">{(orbitalCapacityMW / 1000).toFixed(2)} GW</span>
+                  <span className="text-white font-semibold">{formatSigFigs(orbitalCapacityMW / 1000)} GW</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Orbital Share:</span>
-                  <span className="text-white font-semibold">{orbitShare.toFixed(1)}%</span>
+                  <span className="text-white font-semibold">{formatDecimal(orbitShare, 1)}%</span>
                 </div>
               </div>
             </div>

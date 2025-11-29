@@ -3,6 +3,7 @@
 import { useSandboxStore } from "../store/sandboxStore";
 import { useSimStore } from "../store/simStore";
 import { calculateMetrics } from "../lib/metrics/calculateMetrics";
+import { formatSigFigs, formatDecimal } from "../lib/utils/formatNumber";
 
 export default function KpiBar() {
   const {
@@ -41,37 +42,37 @@ export default function KpiBar() {
       <div className="flex flex-wrap items-center gap-4 text-xs">
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Latency</span>
-          <span className="text-white font-semibold">{metrics.latency.toFixed(1)} ms</span>
+          <span className="text-white font-semibold">{formatDecimal(metrics.latency, 1)} ms</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Energy Cost</span>
-          <span className="text-white font-semibold">{metrics.energyCost.toFixed(1)}M $/yr</span>
+          <span className="text-white font-semibold">{formatSigFigs(metrics.energyCost)}M $/yr</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Cooling</span>
-          <span className="text-white font-semibold">{metrics.coolingCost.toFixed(1)}M $/yr</span>
+          <span className="text-white font-semibold">{formatSigFigs(metrics.coolingCost)}M $/yr</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Carbon</span>
-          <span className="text-white font-semibold">{metrics.carbon.toFixed(1)}k t/yr</span>
+          <span className="text-white font-semibold">{formatSigFigs(metrics.carbon)}k t/yr</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Resilience</span>
-          <span className="text-white font-semibold">{metrics.resilienceScore.toFixed(0)}%</span>
+          <span className="text-white font-semibold">{formatDecimal(metrics.resilienceScore, 0)}%</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Coverage</span>
-          <span className="text-white font-semibold">{orbitShare.toFixed(1)}%</span>
+          <span className="text-white font-semibold">{formatDecimal(orbitShare, 1)}%</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
           <span className="text-gray-400">Orbital Share</span>
-          <span className="text-white font-semibold">{orbitShare.toFixed(1)}%</span>
+          <span className="text-white font-semibold">{formatDecimal(orbitShare, 1)}%</span>
         </div>
         <div className="text-gray-600">|</div>
         <div className="flex items-center gap-1">
