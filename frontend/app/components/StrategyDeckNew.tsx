@@ -248,11 +248,17 @@ export default function StrategyDeckNew() {
                 return (
                   <div key={nodeId} className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-300 capitalize">{nodeId}</span>
+                      <span className={`capitalize ${
+                        utilization > 1 ? "text-red-400 font-semibold animate-pulse" :
+                        utilization > 0.95 ? "text-yellow-400" :
+                        "text-gray-300"
+                      }`}>
+                        {nodeId}
+                      </span>
                       <div className="flex items-center gap-2 text-gray-400">
                         <span>Lines: {lines}</span>
                         <span className={`font-semibold ${
-                          utilization > 1 ? "text-red-400" :
+                          utilization > 1 ? "text-red-400 animate-pulse" :
                           utilization > 0.95 ? "text-yellow-400" :
                           "text-green-400"
                         }`}>
@@ -288,7 +294,11 @@ export default function StrategyDeckNew() {
                 <div className="text-xs font-semibold text-gray-300 mb-2">Bottlenecks</div>
                 <div className="space-y-1">
                   {factoryBottlenecks.map((b) => (
-                    <div key={b.resource} className="flex justify-between text-xs">
+                    <div key={b.resource} className={`flex justify-between text-xs p-1 rounded transition-all ${
+                      b.utilization > 100 ? "bg-red-500/20 border border-red-500/50 animate-pulse" :
+                      b.utilization > 95 ? "bg-yellow-500/20 border border-yellow-500/50" :
+                      ""
+                    }`}>
                       <span className={`capitalize ${
                         b.utilization > 100 ? "text-red-400 font-semibold" : "text-gray-400"
                       }`}>

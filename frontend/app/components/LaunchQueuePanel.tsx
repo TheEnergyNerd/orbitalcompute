@@ -2,13 +2,25 @@
 
 import { useSandboxStore } from "../store/sandboxStore";
 import { calculateDeploymentRate } from "../lib/launch/launchQueue";
+import { useEffect, useState } from "react";
 
 export default function LaunchQueuePanel() {
   const { launchState, factory } = useSandboxStore();
+  const [lastPodsLaunched, setLastPodsLaunched] = useState(0);
+  const [showLaunchAnimation, setShowLaunchAnimation] = useState(false);
 
   const deploymentRate = calculateDeploymentRate(launchState);
   const orbitPods = factory.inventory.orbitPods ?? 0;
   const nextLaunch = launchState.queue.length > 0 ? launchState.queue[0].etaMonths : null;
+
+  // Detect when pods are launched (orbitPods increases)
+  useEffect(() => {
+    if (orbitPods > lastPodsLaunched && lastPodsLaunched > 0) {
+      setShowLaunchAnimation(true);
+      setTimeout(() => setShowLaunchAnimation(false), 2000);
+    }
+    setLastPodsLaunched(orbitPods);
+  }, [orbitPods, lastPodsLaunched]);
 
   return (
     <div className="fixed top-[70px] right-6 w-64 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10">
@@ -28,7 +40,12 @@ export default function LaunchQueuePanel() {
         )}
         <div className="flex justify-between text-gray-400">
           <span>Pods in Orbit:</span>
-          <span className="text-white font-semibold">{orbitPods}</span>
+          <span className={`text-white font-semibold transition-all ${
+            showLaunchAnimation ? "text-green-400 scale-110" : ""
+          }`}>
+            {orbitPods}
+            {showLaunchAnimation && " 🚀"}
+          </span>
         </div>
         <div className="flex justify-between text-gray-400">
           <span>Deployment Rate:</span>
@@ -38,4 +55,3 @@ export default function LaunchQueuePanel() {
     </div>
   );
 }
-
