@@ -477,6 +477,45 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
       };
     });
   },
+  // New Factorio-style sim controls
+  stepSimulation: (dtMinutes) => {
+    set((state) => {
+      if (!state.simState) return state;
+      const nextState = stepSim(state.simState, dtMinutes);
+      return { simState: nextState };
+    });
+  },
+  updateMachineLines: (machineId, lines) => {
+    set((state) => {
+      if (!state.simState) return state;
+      const machine = state.simState.machines[machineId as keyof typeof state.simState.machines];
+      if (!machine) return state;
+      
+      return {
+        simState: {
+          ...state.simState,
+          machines: {
+            ...state.simState.machines,
+            [machineId]: {
+              ...machine,
+              lines: Math.max(0, Math.floor(lines)),
+            },
+          },
+        },
+      };
+    });
+  },
+  setTimeScale: (scale) => {
+    set((state) => {
+      if (!state.simState) return state;
+      return {
+        simState: {
+          ...state.simState,
+          timeScale: scale,
+        },
+      };
+    });
+  },
 }));
 
 
