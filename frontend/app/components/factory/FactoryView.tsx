@@ -273,7 +273,7 @@ export default function FactoryView() {
                   textAnchor="middle"
                   className="text-[8px] fill-gray-400"
                 >
-                  {formatSigFigs(bufferLevel, 0)}
+                  {formatDecimal(bufferLevel, 0)}
                 </text>
               )}
 
