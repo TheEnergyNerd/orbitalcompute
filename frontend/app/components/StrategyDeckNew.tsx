@@ -405,8 +405,8 @@ export default function StrategyDeckNew() {
         )}
 
         {activeTab === "missions" && (
-          <div className="space-y-3">
-            <MissionList />
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            <MissionPanel />
           </div>
         )}
       </div>
