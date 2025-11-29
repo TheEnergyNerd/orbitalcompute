@@ -396,10 +396,14 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
       // Process launch queue
       const podsAvailable = updatedFactory.inventory.pods ?? 0;
       const fuelAvailable = updatedFactory.inventory.fuel ?? 0;
+      // Ensure launchState exists
+      const currentLaunchState = state.launchState || createDefaultLaunchState();
       const { newState: updatedLaunchState, podsLaunched } = processLaunchQueue(
-        state.launchState,
+        currentLaunchState,
         podsAvailable,
-        fuelAvailable
+        fuelAvailable,
+        10, // fuelPerLaunch
+        monthFraction
       );
       
       // Consume pods and fuel for launches, add to orbit

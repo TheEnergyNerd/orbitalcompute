@@ -443,7 +443,7 @@ export default function StrategyDeck() {
             Factory Lines
           </h4>
           <span className="text-[10px] text-gray-400">
-            Build queue: {factory.buildQueue.length} / {factory.maxConcurrentBuilds}
+            Infra: {factory.usedInfraPoints} / {factory.maxInfraPoints} pts
           </span>
         </div>
         <div className="mb-2 space-y-1.5">

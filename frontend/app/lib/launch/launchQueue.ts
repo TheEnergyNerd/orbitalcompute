@@ -73,16 +73,22 @@ export function processLaunchQueue(
   launchState: LaunchState,
   podsAvailable: number,
   fuelAvailable: number,
-  fuelPerLaunch: number = 10
+  fuelPerLaunch: number = 10,
+  monthFraction: number = 1.0
 ): { newState: LaunchState; podsLaunched: number } {
   const next: LaunchState = {
     ...launchState,
-    queue: launchState.queue.map(item => ({ ...item, etaMonths: item.etaMonths - 1 })),
+    queue: (launchState.queue || []).map(item => ({ ...item, etaMonths: item.etaMonths - monthFraction })),
   };
 
   // Remove completed launches
   const completed = next.queue.filter(item => item.etaMonths <= 0).length;
   next.queue = next.queue.filter(item => item.etaMonths > 0);
+  
+  // Initialize queue if undefined
+  if (!next.queue) {
+    next.queue = [];
+  }
 
   let podsLaunched = completed;
 

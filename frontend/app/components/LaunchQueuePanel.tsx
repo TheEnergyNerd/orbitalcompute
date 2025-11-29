@@ -1,0 +1,41 @@
+"use client";
+
+import { useSandboxStore } from "../store/sandboxStore";
+import { calculateDeploymentRate } from "../lib/launch/launchQueue";
+
+export default function LaunchQueuePanel() {
+  const { launchState, factory } = useSandboxStore();
+
+  const deploymentRate = calculateDeploymentRate(launchState);
+  const orbitPods = factory.inventory.orbitPods ?? 0;
+  const nextLaunch = launchState.queue.length > 0 ? launchState.queue[0].etaMonths : null;
+
+  return (
+    <div className="fixed top-[70px] right-6 w-64 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10">
+      <div className="text-xs font-semibold text-gray-300 mb-3 uppercase">Launch Summary</div>
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-between text-gray-400">
+          <span>Queue:</span>
+          <span className="text-white font-semibold">
+            {launchState.queue.length} / {launchState.maxQueue}
+          </span>
+        </div>
+        {nextLaunch !== null && (
+          <div className="flex justify-between text-gray-400">
+            <span>Next launch:</span>
+            <span className="text-white font-semibold">{Math.ceil(nextLaunch)} mo</span>
+          </div>
+        )}
+        <div className="flex justify-between text-gray-400">
+          <span>Pods in Orbit:</span>
+          <span className="text-white font-semibold">{orbitPods}</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>Deployment Rate:</span>
+          <span className="text-white font-semibold">{deploymentRate.toFixed(1)} pods/mo</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+

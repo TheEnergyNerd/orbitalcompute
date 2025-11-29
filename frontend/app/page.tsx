@@ -4,13 +4,15 @@ import SandboxGlobe from "./components/SandboxGlobe";
 import DetailPanel from "./components/DetailPanel";
 import SandboxControls from "./components/SandboxControls";
 import SandboxMetrics from "./components/SandboxMetrics";
-import SimulationFeedback from "./components/SimulationFeedback";
+// import SimulationFeedback from "./components/SimulationFeedback"; // Replaced by KpiBar
 import SandboxVisualizations from "./components/SandboxVisualizations";
 import SandboxTutorial from "./components/SandboxTutorial";
 import NewTutorial from "./components/NewTutorial";
 import DeploymentQueue from "./components/DeploymentQueue";
 import MissionPanel from "./components/MissionPanel";
-import StrategyDeck from "./components/StrategyDeck";
+import StrategyDeckNew from "./components/StrategyDeckNew";
+import KpiBar from "./components/KpiBar";
+import LaunchQueuePanel from "./components/LaunchQueuePanel";
 import SandboxModeSwitcher from "./components/SandboxModeSwitcher";
 import DeploymentTimeDisplay from "./components/DeploymentTimeDisplay";
 import { useEffect } from "react";
@@ -67,10 +69,10 @@ export default function Home() {
           <GlobePositionDebug viewerRef={viewerRef} />
           <ErrorPanel />
           <SandboxModeSwitcher />
-          <StrategyDeck />
+          <StrategyDeckNew />
+          <LaunchQueuePanel />
           <MissionPanel />
-          <SandboxControls />
-          <SimulationFeedback />
+          <KpiBar />
           <SandboxVisualizations />
           <NewTutorial />
           <DeploymentQueue />
