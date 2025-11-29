@@ -96,31 +96,9 @@ export default function LeftPanel({ selectedNodeId: propSelectedNodeId, onSelect
 
         {activeMode === "orbit" && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">Orbit Mode</label>
-              <div className="flex gap-2">
-                {(["LEO", "MEO", "GEO"] as Array<"LEO" | "MEO" | "GEO">).map((mode) => {
-                  const isUnlocked = unlockedOrbitModes.includes(mode);
-                  return (
-                    <button
-                      key={mode}
-                      onClick={() => isUnlocked && setOrbitMode(mode)}
-                      disabled={!isUnlocked}
-                      className={`px-3 py-1.5 text-xs rounded transition ${
-                        !isUnlocked
-                          ? "bg-gray-900 text-gray-600 opacity-50 cursor-not-allowed"
-                          : orbitMode === mode
-                          ? "bg-accent-blue text-white"
-                          : "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                      }`}
-                    >
-                      {mode}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="text-xs text-gray-400">
+              Orbit Mode: <span className="text-white font-semibold">LEO</span> (fixed)
             </div>
-
             <div>
               <label className="block text-xs text-gray-400 mb-2">Pod Type</label>
               <select className="w-full px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-300">

@@ -11,6 +11,8 @@ export interface ResourceState {
   buffer: number;    // current stock
   prodPerMin: number;
   consPerMin: number;
+  isSource?: boolean;      // true for infinite source resources (silicon, steel, methane, lox)
+  baseSourceRate?: number; // production rate for source resources
 }
 
 export type MachineId = 'chipFab' | 'rackLine' | 'podFactory' | 'fuelPlant' | 'launchComplex';
@@ -50,17 +52,21 @@ export function createInitialSimState(): SimState {
       id: 'silicon',
       name: 'Silicon',
       units: 'wafers',
-      buffer: 1000,
+      buffer: 10000, // Large buffer for visual feedback
       prodPerMin: 0,
       consPerMin: 0,
+      isSource: true,
+      baseSourceRate: 1000, // Enough to support multiple chip fab lines
     },
     steel: {
       id: 'steel',
       name: 'Steel',
       units: 't',
-      buffer: 500,
+      buffer: 5000, // Large buffer for visual feedback
       prodPerMin: 0,
       consPerMin: 0,
+      isSource: true,
+      baseSourceRate: 50, // Enough to support rack lines
     },
     chips: {
       id: 'chips',
@@ -90,17 +96,21 @@ export function createInitialSimState(): SimState {
       id: 'methane',
       name: 'Methane',
       units: 't',
-      buffer: 100,
+      buffer: 1000, // Large buffer for visual feedback
       prodPerMin: 0,
       consPerMin: 0,
+      isSource: true,
+      baseSourceRate: 100, // Enough to support fuel plant
     },
     lox: {
       id: 'lox',
       name: 'LOX',
       units: 't',
-      buffer: 100,
+      buffer: 1000, // Large buffer for visual feedback
       prodPerMin: 0,
       consPerMin: 0,
+      isSource: true,
+      baseSourceRate: 100, // Enough to support fuel plant
     },
     fuel: {
       id: 'fuel',

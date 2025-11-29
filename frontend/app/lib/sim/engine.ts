@@ -67,6 +67,20 @@ export function stepSim(state: SimState, dtMinutes: number): SimState {
     };
   }
 
+  // Generate source resources (infinite sources)
+  for (const resourceId of Object.keys(next.resources) as ResourceId[]) {
+    const resource = next.resources[resourceId];
+    if (resource.isSource && resource.baseSourceRate) {
+      const sourceProd = resource.baseSourceRate * scaledDt;
+      resource.buffer += sourceProd;
+      resource.prodPerMin += resource.baseSourceRate;
+      // Clamp buffer to a reasonable maximum for visual feedback
+      if (resource.buffer > 100000) {
+        resource.buffer = 100000;
+      }
+    }
+  }
+
   // Process each machine
   for (const machineId of Object.keys(next.machines) as Array<keyof typeof next.machines>) {
     const machine = next.machines[machineId];
@@ -115,6 +129,11 @@ export function stepSim(state: SimState, dtMinutes: number): SimState {
         const actualConsumed = Math.min(consumed, resource.buffer);
         resource.buffer = Math.max(0, resource.buffer - actualConsumed);
         resource.consPerMin += rate * utilization;
+        
+        // For source resources, don't let buffer go below a minimum threshold
+        if (resource.isSource && resource.buffer < 1000) {
+          resource.buffer = 1000;
+        }
       }
     }
 
@@ -140,5 +159,20 @@ export function stepSim(state: SimState, dtMinutes: number): SimState {
   }
 
   return next;
+}
+
+/**
+ * Get resource throughput (max of production and consumption)
+ * Used for belt animation - belts should animate based on flow, not net rate
+ */
+export function getResourceThroughput(
+  resourceId: ResourceId,
+  sim: SimState
+): number {
+  const r = sim.resources[resourceId];
+  if (!r) return 0;
+  // "Flow" is the gross movement through the chain, not the net.
+  // Use max of prod and cons so belts animate even in steady-state.
+  return Math.max(r.prodPerMin, r.consPerMin, 0);
 }
 

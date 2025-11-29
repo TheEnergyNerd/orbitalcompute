@@ -4,13 +4,13 @@ import SandboxGlobe from "./components/SandboxGlobe";
 import DetailPanel from "./components/DetailPanel";
 // Removed old components: SandboxControls, SandboxMetrics, SimulationFeedback, DeploymentQueue, DeploymentTimeDisplay
 import SandboxVisualizations from "./components/SandboxVisualizations";
-import NewTutorial from "./components/NewTutorial";
 import LeftPanel from "./components/LeftPanel";
 import KpiBar from "./components/KpiBar";
 import SunClockSimplified from "./components/SunClockSimplified";
 import TimeScaleControl from "./components/TimeScaleControl";
 import SandboxModeSwitcher from "./components/SandboxModeSwitcher";
 import FactoryView from "./components/factory/FactoryView";
+import FactoryHelpPanel from "./components/FactoryHelpPanel";
 import { useEffect, useState } from "react";
 import { useSimStore } from "./store/simStore";
 import { useSandboxStore } from "./store/sandboxStore";
@@ -69,8 +69,8 @@ export default function Home() {
           <TimeScaleControl />
           <KpiBar />
           <FactoryView selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
+          <FactoryHelpPanel />
           <SandboxVisualizations />
-          <NewTutorial />
           <DetailPanel />
         </>
       )}

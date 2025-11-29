@@ -34,14 +34,8 @@ function getResourceBufferFromSim(id: ResourceId, sim: SimState): number {
   return sim.resources[id]?.buffer ?? 0;
 }
 
-/**
- * Get resource throughput (max of production and consumption)
- */
-function getResourceThroughput(id: ResourceId, sim: SimState): number {
-  const resource = sim.resources[id];
-  if (!resource) return 0;
-  return Math.max(resource.prodPerMin, resource.consPerMin);
-}
+// Import from engine instead of duplicating
+import { getResourceThroughput as getResourceThroughputEngine } from "../../lib/sim/engine";
 
 /**
  * FactoryView - Top-down schematic view of the factory (PRIMARY VIEW)
@@ -154,7 +148,7 @@ export default function FactoryView({ selectedNodeId = null, onSelectNode }: Fac
           const toX = toNode.x * viewBoxWidth + (toNode.width * viewBoxWidth) / 2;
           const toY = toNode.y * viewBoxHeight + (toNode.height * viewBoxHeight) / 2;
 
-          const throughput = getResourceThroughput(edge.resource, simState);
+          const throughput = getResourceThroughputEngine(edge.resource, simState);
           const speed = Math.min(1, throughput / 100);
           const opacity = throughput > 0 ? 0.6 + (speed * 0.4) : 0.2;
           const color = getResourceColor(edge.resource);
