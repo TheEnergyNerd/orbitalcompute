@@ -2,12 +2,13 @@
 
 import { useSandboxStore, type OrbitMode, type DensityMode } from "../store/sandboxStore";
 import { useOrbitalUnitsStore } from "../store/orbitalUnitsStore";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { calculateDeploymentEngine, type DeploymentState } from "../lib/deployment/deploymentEngine";
 import { POD_TIERS, getAvailableTiers, type PodTierId } from "../lib/deployment/podTiers";
 import { LAUNCH_PROVIDERS, type LaunchProviderId } from "../lib/deployment/launchProviders";
 import { getDensityBand } from "../lib/deployment/orbitalDensity";
 import type { FacilityType } from "../lib/factory/factoryEngine";
+import { FACILITY_BUILD_CONFIG, LINE_POINTS } from "../lib/factory/factoryEngine";
 
 export default function StrategyDeck() {
   const {
@@ -48,6 +49,15 @@ export default function StrategyDeck() {
     orbit: false,
     launch: false,
     ground: false,
+  });
+
+  // Error flash state for facility sliders
+  const [rejectionFlash, setRejectionFlash] = useState<Record<FacilityType, { reason: string; timestamp: number } | null>>({
+    chipFab: null,
+    rackLine: null,
+    podFactory: null,
+    fuelDepot: null,
+    launchComplex: null,
   });
 
   // Auto-expand accordions during tutorial
@@ -488,18 +498,80 @@ export default function StrategyDeck() {
                     · L{fac.level}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={10}
-                  value={fac.desiredLines}
-                  onChange={(e) =>
-                    updateFactoryFacility(fac.type as FacilityType, {
-                      desiredLines: Number(e.target.value),
-                    } as any)
-                  }
-                  className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-blue"
-                />
+                <div className="relative">
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={fac.desiredLines}
+                    onChange={(e) => {
+                      const requestedValue = Number(e.target.value);
+                      const currentFac = factory.facilities.find(f => f.type === fac.type);
+                      const previousDesired = currentFac?.desiredLines ?? fac.desiredLines;
+                      
+                      // Only check for rejections when increasing desiredLines
+                      if (requestedValue > previousDesired) {
+                        const cfg = FACILITY_BUILD_CONFIG[fac.type];
+                        const pointsPerLine = LINE_POINTS[fac.type];
+                        const cashNeeded = cfg.capexPerLine;
+                        const currentCash = factory.inventory.cash ?? 0;
+                        const currentInfraUsed = factory.infrastructurePointsUsed;
+                        const infraCap = factory.infrastructurePointsCap;
+                        
+                        // Calculate how many lines we're trying to add
+                        const pendingAdds = factory.buildQueue.filter(
+                          o => o.facilityType === fac.type && o.deltaLines > 0
+                        ).length;
+                        const pendingRemovals = factory.buildQueue.filter(
+                          o => o.facilityType === fac.type && o.deltaLines < 0
+                        ).length;
+                        const effectiveCurrentLines = fac.lines + pendingAdds - pendingRemovals;
+                        const linesToAdd = requestedValue - effectiveCurrentLines;
+                        
+                        if (linesToAdd > 0) {
+                          // Check constraints
+                          let rejectionReason: string | null = null;
+                          if (currentInfraUsed + pointsPerLine > infraCap) {
+                            rejectionReason = "Infrastructure cap reached";
+                          } else if (currentCash < cashNeeded) {
+                            rejectionReason = "Not enough cash";
+                          } else if (factory.buildQueue.length >= factory.maxConcurrentBuilds) {
+                            rejectionReason = "Build queue full";
+                          }
+                          
+                          if (rejectionReason) {
+                            // Show error flash immediately
+                            setRejectionFlash(prev => ({
+                              ...prev,
+                              [fac.type]: { reason: rejectionReason!, timestamp: Date.now() },
+                            }));
+                            // Clear flash after 3 seconds
+                            setTimeout(() => {
+                              setRejectionFlash(prev => ({
+                                ...prev,
+                                [fac.type]: null,
+                              }));
+                            }, 3000);
+                            // Still allow the update - reconcileDesiredLines will snap it back
+                          }
+                        }
+                      }
+                      
+                      updateFactoryFacility(fac.type as FacilityType, {
+                        desiredLines: requestedValue,
+                      } as any);
+                    }}
+                    className={`w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-blue transition-all ${
+                      rejectionFlash[fac.type] ? "ring-2 ring-red-500 animate-pulse" : ""
+                    }`}
+                  />
+                  {rejectionFlash[fac.type] && (
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-[10px] px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap pointer-events-none animate-fade-in">
+                      {rejectionFlash[fac.type]?.reason}
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-red-600"></div>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

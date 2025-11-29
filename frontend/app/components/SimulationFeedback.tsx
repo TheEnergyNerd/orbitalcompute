@@ -6,6 +6,7 @@ import { useOrbitalUnitsStore } from "../store/orbitalUnitsStore";
 import { useEffect, useState, useRef } from "react";
 import { calculateMetrics } from "../lib/metrics/calculateMetrics";
 import { calculateDeploymentEngine, type DeploymentState } from "../lib/deployment/deploymentEngine";
+import { FACILITY_BUILD_CONFIG } from "../lib/factory/factoryEngine";
 
 interface MetricCard {
   label: string;
@@ -29,6 +30,7 @@ export default function SimulationFeedback() {
     offloadPct,
     densityMode,
     totalPodsBuilt,
+    factory,
   } = useSandboxStore();
   const { getDeployedUnits, getQueuedUnits } = useOrbitalUnitsStore();
   const state = useSimStore((s) => s.state);
@@ -92,6 +94,16 @@ export default function SimulationFeedback() {
     const coverage = calculateCoverage(orbitShare, orbitMode);
     const populationServed = calculatePopulationServed(orbitShare, orbitMode);
 
+    // Calculate factory metrics
+    const monthlyOpex = factory.facilities.reduce((sum, fac) => {
+      const cfg = FACILITY_BUILD_CONFIG[fac.type];
+      return sum + fac.lines * cfg.opexPerLinePerMonth;
+    }, 0);
+    const factoryCash = factory.inventory.cash ?? 0;
+    const factoryPL = previousMetrics.factoryCash !== undefined 
+      ? factoryCash - previousMetrics.factoryCash 
+      : 0;
+
     // Calculate deltas
     const latencyDelta = previousMetrics.latency 
       ? ((calculatedMetrics.latency - previousMetrics.latency) / previousMetrics.latency) * 100
@@ -150,6 +162,14 @@ export default function SimulationFeedback() {
       isPulsing: leverChanged && (Math.abs(latencyDelta) > 0.1 || Math.abs(resilienceDelta) > 0.1 || Math.abs(coverageDelta) > 0.1),
     };
 
+    // Calculate factory deltas
+    const opexDelta = previousMetrics.monthlyOpex
+      ? ((monthlyOpex - previousMetrics.monthlyOpex) / previousMetrics.monthlyOpex) * 100
+      : 0;
+    const factoryPLDelta = previousMetrics.factoryPL !== undefined
+      ? factoryPL - previousMetrics.factoryPL
+      : 0;
+
     // Cluster 2: Cost
     const costCluster: MetricCluster = {
       title: "Cost",
@@ -168,8 +188,22 @@ export default function SimulationFeedback() {
           delta: coolingDelta,
           isPulsing: leverChanged && Math.abs(coolingDelta) > 0.1,
         },
+        {
+          label: "Monthly Opex",
+          value: monthlyOpex,
+          unit: "$M/mo",
+          delta: opexDelta,
+          isPulsing: leverChanged && Math.abs(opexDelta) > 0.1,
+        },
+        {
+          label: "Factory P/L",
+          value: factoryPL,
+          unit: "$M",
+          delta: factoryPLDelta,
+          isPulsing: leverChanged && Math.abs(factoryPLDelta) > 0.1,
+        },
       ],
-      isPulsing: leverChanged && (Math.abs(energyDelta) > 0.1 || Math.abs(coolingDelta) > 0.1),
+      isPulsing: leverChanged && (Math.abs(energyDelta) > 0.1 || Math.abs(coolingDelta) > 0.1 || Math.abs(opexDelta) > 0.1 || Math.abs(factoryPLDelta) > 0.1),
     };
 
     // Cluster 3: Environmental
@@ -242,6 +276,9 @@ export default function SimulationFeedback() {
       populationServed,
       orbitShare: orbitShare * 100,
       queue: queuedUnits.length,
+      monthlyOpex,
+      factoryCash,
+      factoryPL,
     });
   }, [
     state,
@@ -251,6 +288,7 @@ export default function SimulationFeedback() {
     offloadPct,
     densityMode,
     totalPodsBuilt,
+    factory,
     getDeployedUnits,
     getQueuedUnits,
   ]);
@@ -270,6 +308,10 @@ export default function SimulationFeedback() {
     if (unit.startsWith("/")) {
       // Queue format: value / max
       return `${Math.round(value)}${unit}`;
+    }
+    // For Factory P/L, show +/- sign
+    if (unit === "$M" && Math.abs(value) < 0.01) {
+      return "0.0";
     }
     if (value >= 1e6) {
       return `${(value / 1e6).toFixed(1)}M`;
@@ -311,7 +353,18 @@ export default function SimulationFeedback() {
                         metric.delta < 0 ? "text-green-400" : "text-red-400"
                       }`}>
                         <span>{metric.delta < 0 ? "↓" : "↑"}</span>
-                        <span>{Math.abs(metric.delta).toFixed(1)}%</span>
+                        <span>
+                          {metric.unit === "$M" && metric.delta !== 0
+                            ? `${metric.delta >= 0 ? "+" : ""}${metric.delta.toFixed(1)}`
+                            : `${Math.abs(metric.delta).toFixed(1)}%`}
+                        </span>
+                      </div>
+                    )}
+                    {metric.label === "Factory P/L" && (
+                      <div className={`text-[9px] sm:text-xs mt-0.5 sm:mt-1 ${
+                        factoryCash >= 0 ? "text-green-400" : "text-red-400"
+                      }`}>
+                        Cash: ${formatValue(factoryCash, "$M")}
                       </div>
                     )}
                   </div>
