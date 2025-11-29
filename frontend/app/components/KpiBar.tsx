@@ -8,6 +8,7 @@ export default function KpiBar() {
   const {
     orbitMode,
     factory,
+    launchState,
   } = useSandboxStore();
   const state = useSimStore((s) => s.state);
 

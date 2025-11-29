@@ -7,6 +7,7 @@ import { FACTORY_RECIPES } from "../lib/factory/factoryRecipes";
 import type { LaunchProviderId } from "../lib/launch/launchQueue";
 import { DEFAULT_LAUNCH_PROVIDERS, calculateDeploymentRate } from "../lib/launch/launchQueue";
 import { calculateMetrics } from "../lib/metrics/calculateMetrics";
+import MissionPanel from "./MissionPanel";
 
 type Tab = "orbit" | "factory" | "space" | "missions";
 
@@ -394,8 +395,8 @@ export default function StrategyDeckNew() {
         )}
 
         {activeTab === "missions" && (
-          <div className="text-xs text-gray-400">
-            Missions panel - to be wired
+          <div className="space-y-3">
+            <MissionList />
           </div>
         )}
       </div>
