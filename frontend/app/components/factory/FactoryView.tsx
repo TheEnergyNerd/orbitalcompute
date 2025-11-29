@@ -47,7 +47,7 @@ function getResourceThroughput(id: ResourceId, sim: SimState): number {
  * FactoryView - Top-down schematic view of the factory (PRIMARY VIEW)
  */
 export default function FactoryView({ selectedNodeId = null, onSelectNode }: FactoryViewProps = {}) {
-  const { simState, timeScale } = useSandboxStore();
+  const { simState } = useSandboxStore();
   const [launchEvents, setLaunchEvents] = useState<LaunchEvent[]>([]);
   const lastLaunchCountRef = useRef(0);
   const [internalSelectedNode, setInternalSelectedNode] = useState<FactoryNodeId | null>(null);
@@ -499,7 +499,7 @@ export default function FactoryView({ selectedNodeId = null, onSelectNode }: Fac
           textAnchor="end"
           className="text-[8px] fill-gray-500"
         >
-          {timeScale}×
+          {simState?.timeScale ?? 1}×
         </text>
       </svg>
 

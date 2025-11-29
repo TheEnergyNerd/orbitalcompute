@@ -1,23 +1,10 @@
 "use client";
 
-import { useSimStore } from "../store/simStore";
 import { useSandboxStore } from "../store/sandboxStore";
-import { useEffect, useState } from "react";
 import { formatSigFigs } from "../lib/utils/formatNumber";
 
 export default function SunClockSimplified() {
-  const state = useSimStore((s) => s.state);
   const { simState } = useSandboxStore();
-  const [sunlitPercent, setSunlitPercent] = useState(0);
-
-  // Calculate sunlit statistics
-  useEffect(() => {
-    if (state?.satellites) {
-      const sunlit = state.satellites.filter((sat) => sat.sunlit).length;
-      const total = state.satellites.length;
-      setSunlitPercent(total > 0 ? (sunlit / total) * 100 : 0);
-    }
-  }, [state]);
 
   // Get orbital capacity from sim state
   const podsInOrbit = simState?.resources.launches?.buffer ?? 0;
@@ -34,20 +21,6 @@ export default function SunClockSimplified() {
       <div className="text-xs font-semibold text-gray-300 mb-3 uppercase">Sun Clock</div>
       
       <div className="space-y-3">
-        {/* Sunlit percentage */}
-        <div>
-          <div className="flex justify-between items-center mb-1 text-xs">
-            <span className="text-gray-400">Satellites in Sunlight</span>
-            <span className="text-white font-semibold">{formatSigFigs(sunlitPercent)}%</span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full transition-all"
-              style={{ width: `${sunlitPercent}%` }}
-            />
-          </div>
-        </div>
-
         {/* Pods in orbit */}
         <div>
           <div className="flex justify-between items-center mb-1 text-xs">

@@ -81,7 +81,7 @@ export default function LeftPanel() {
         {activeMode === "factory" && (
           <FactorySidebar
             selectedNodeId={selectedNodeId as any}
-            onSelectNode={setSelectedNodeId}
+            onSelectNode={onSelectNode}
           />
         )}
 

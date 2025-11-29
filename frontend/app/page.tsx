@@ -11,7 +11,7 @@ import SunClockSimplified from "./components/SunClockSimplified";
 import TimeScaleControl from "./components/TimeScaleControl";
 import SandboxModeSwitcher from "./components/SandboxModeSwitcher";
 import FactoryView from "./components/factory/FactoryView";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSimStore } from "./store/simStore";
 import { useSandboxStore } from "./store/sandboxStore";
 import GlobePositionDebug from "./components/GlobePositionDebug";
@@ -24,6 +24,7 @@ export default function Home() {
   // Use shared Cesium viewer hook - single instance for entire app
   const viewerRef = useCesiumViewer("cesium-globe-container");
   const safeMode = getSafeMode();
+  const [factorySelectedNode, setFactorySelectedNode] = useState<string | null>(null);
   
   // Log GPU event on mount
   useEffect(() => {
@@ -63,11 +64,11 @@ export default function Home() {
           <GlobePositionDebug viewerRef={viewerRef} />
           <ErrorPanel />
           <SandboxModeSwitcher />
-          <LeftPanel />
+          <LeftPanel selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
           <SunClockSimplified />
           <TimeScaleControl />
           <KpiBar />
-          <FactoryView />
+          <FactoryView selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
           <SandboxVisualizations />
           <NewTutorial />
           <DetailPanel />
