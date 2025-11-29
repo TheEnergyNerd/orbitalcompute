@@ -14,6 +14,7 @@ export default function LeftPanel() {
   const { simState, updateMachineLines, orbitMode, setOrbitMode, unlockedOrbitModes } = useSandboxStore();
   const [activeMode, setActiveMode] = useState<Mode>("factory");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   if (!simState) {
     return <div className="text-xs text-gray-500">Loading simulation state...</div>;

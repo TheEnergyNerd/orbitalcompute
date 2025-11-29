@@ -63,22 +63,12 @@ export default function MissionPanel() {
     (m) => unlockedMissions.includes(m.id) && !completedMissions.includes(m.id)
   );
 
-  // Position next to Strategy Deck (left side, below it)
-  // Only show collapsed button in freeplay mode when not expanded and not in missions mode
-  if (sandboxMode === "freeplay" && !isExpanded && !activeMissionId) {
-    return null; // Hide collapsed missions button - use mode switcher instead
-  }
-
+  // MissionPanel is now only rendered inside LeftPanel, not as a standalone component
+  // Remove the fixed positioning and return just the content
   return (
-    <div className="hidden sm:block fixed top-[280px] left-6 z-40 panel-glass rounded-xl p-4 w-80 max-w-[calc(100vw-12px)] shadow-2xl border border-white/10 max-h-[60vh] overflow-y-auto" data-tutorial-target="missions">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-accent-blue">Missions</h2>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="text-gray-400 hover:text-white"
-        >
-          ✕
-        </button>
+    <div className="space-y-4" data-tutorial-target="missions">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-accent-blue">Missions</h2>
       </div>
 
       {/* Active Mission Progress */}

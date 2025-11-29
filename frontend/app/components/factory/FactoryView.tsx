@@ -6,6 +6,7 @@ import { getMachineUtilization } from "../../lib/sim/engine";
 import type { SimState, ResourceId, MachineId } from "../../lib/sim/model";
 import { FACTORY_NODES, FACTORY_EDGES, getResourceColor, type FactoryNodeId } from "../../lib/factory/factoryLayout";
 import { formatSigFigs, formatDecimal } from "../../lib/utils/formatNumber";
+import { classifyNode, getNodeBorderColor, getNetRateColor, type NodeStatus } from "../../lib/ui/semantics";
 
 interface LaunchEvent {
   id: number;
@@ -40,10 +41,20 @@ function getResourceThroughput(id: ResourceId, sim: SimState): number {
 /**
  * FactoryView - Top-down schematic view of the factory
  */
-export default function FactoryView() {
+interface FactoryViewProps {
+  selectedNodeId?: FactoryNodeId | null;
+  onSelectNode?: (nodeId: FactoryNodeId | null) => void;
+}
+
+export default function FactoryView({ selectedNodeId = null, onSelectNode }: FactoryViewProps = {}) {
   const { simState } = useSandboxStore();
   const [launchEvents, setLaunchEvents] = useState<LaunchEvent[]>([]);
   const lastLaunchCountRef = useRef(0);
+  const [internalSelectedNode, setInternalSelectedNode] = useState<FactoryNodeId | null>(null);
+  
+  // Use prop if provided, otherwise use internal state
+  const currentSelectedNode = selectedNodeId !== undefined ? selectedNodeId : internalSelectedNode;
+  const handleSelectNode = onSelectNode || setInternalSelectedNode;
 
   if (!simState) {
     return (

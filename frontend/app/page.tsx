@@ -5,7 +5,6 @@ import DetailPanel from "./components/DetailPanel";
 // Removed old components: SandboxControls, SandboxMetrics, SimulationFeedback, DeploymentQueue, DeploymentTimeDisplay
 import SandboxVisualizations from "./components/SandboxVisualizations";
 import NewTutorial from "./components/NewTutorial";
-import MissionPanel from "./components/MissionPanel";
 import LeftPanel from "./components/LeftPanel";
 import KpiBar from "./components/KpiBar";
 import SunClockSimplified from "./components/SunClockSimplified";
