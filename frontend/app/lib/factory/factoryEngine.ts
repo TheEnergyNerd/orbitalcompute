@@ -39,9 +39,10 @@ export type FacilityType =
 
 export type FacilityState = {
   type: FacilityType;
-  count: number;       // number of parallel lines
-  level: number;       // upgrade level 1..N
-  efficiency: number;  // 0–1, modified by events
+  lines: number;        // active, built lines
+  desiredLines: number; // target lines set by UI
+  level: number;        // upgrade level 1..N
+  efficiency: number;   // 0–1, modified by events
 };
 
 export type RecipeId =
@@ -67,6 +68,14 @@ export type ActiveRecipe = {
   progressDays: number;
 };
 
+export type BuildOrder = {
+  id: string;
+  facilityType: FacilityType;
+  deltaLines: number;     // +1 for add, -1 for dismantle
+  remainingDays: number;
+  capexCost: number;
+};
+
 export type FactoryState = {
   inventory: ResourceInventory;
   facilities: FacilityState[];   // one per FacilityType
@@ -74,6 +83,10 @@ export type FactoryState = {
   podsBuiltTotal: number;
   podsReadyOnGround: number;
   podsBuiltThisTick: number;
+  buildQueue: BuildOrder[];
+  maxConcurrentBuilds: number;
+  infrastructurePointsUsed: number;
+  infrastructurePointsCap: number;
 };
 
 // ---------- Static recipes ----------
@@ -153,7 +166,8 @@ export type FactoryTickResult = {
  * number of lines, upgrade level, and efficiency.
  */
 export function facilityThroughputMultiplier(f: FacilityState): number {
-  const countFactor = Math.max(0, f.count);
+  const lineCount = f.lines ?? 0;
+  const countFactor = Math.max(0, lineCount);
   const levelFactor = Math.pow(1.5, Math.max(0, f.level - 1)); // diminishing returns
   const efficiency = Math.max(0, Math.min(1, f.efficiency));
   return countFactor * levelFactor * efficiency;
@@ -164,7 +178,7 @@ export function facilityThroughputMultiplier(f: FacilityState): number {
 function getFacility(state: FactoryState, type: FacilityType): FacilityState {
   let facility = state.facilities.find((f) => f.type === type);
   if (!facility) {
-    facility = { type, count: 0, level: 1, efficiency: 1 };
+    facility = { type, lines: 0, desiredLines: 0, level: 1, efficiency: 1 };
     state.facilities.push(facility);
   }
   return facility;
@@ -195,6 +209,133 @@ function cloneInventory(inv: ResourceInventory): ResourceInventory {
   return { ...inv };
 }
 
+// ---------- Build configuration & infra ----------
+
+export const FACILITY_BUILD_CONFIG: Record<
+  FacilityType,
+  { capexPerLine: number; buildDaysPerLine: number; opexPerLinePerMonth: number }
+> = {
+  chipFab:       { capexPerLine: 30, buildDaysPerLine: 360, opexPerLinePerMonth: 1.5 },
+  rackLine:      { capexPerLine: 10, buildDaysPerLine: 180, opexPerLinePerMonth: 0.5 },
+  podFactory:    { capexPerLine: 20, buildDaysPerLine: 240, opexPerLinePerMonth: 0.8 },
+  fuelDepot:     { capexPerLine: 5,  buildDaysPerLine: 120, opexPerLinePerMonth: 0.2 },
+  launchComplex: { capexPerLine: 50, buildDaysPerLine: 540, opexPerLinePerMonth: 2.0 },
+};
+
+export const LINE_POINTS: Record<FacilityType, number> = {
+  chipFab: 3,
+  rackLine: 1,
+  podFactory: 2,
+  fuelDepot: 1,
+  launchComplex: 4,
+};
+
+function cryptoRandomId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return (crypto as any).randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+}
+
+export function reconcileDesiredLines(
+  factory: FactoryState,
+  cash: number
+): FactoryState {
+  const next: FactoryState = {
+    ...factory,
+    facilities: factory.facilities.map((f) => ({ ...f })),
+    buildQueue: factory.buildQueue.map((o) => ({ ...o })),
+  };
+
+  // Track current pending delta per facility (existing build orders)
+  const pendingByFac: Partial<Record<FacilityType, number>> = {};
+  next.buildQueue.forEach((o) => {
+    pendingByFac[o.facilityType] = (pendingByFac[o.facilityType] ?? 0) + o.deltaLines;
+  });
+
+  for (const fac of next.facilities) {
+    const existingPending = pendingByFac[fac.type] ?? 0;
+    const desiredTotalLines = Math.max(0, fac.desiredLines);
+    const targetRelative =
+      desiredTotalLines - (fac.lines + existingPending);
+    if (targetRelative === 0) {
+      // Nothing new to do for this facility
+      continue;
+    }
+
+    const direction = targetRelative > 0 ? 1 : -1;
+    const remaining = Math.abs(targetRelative);
+    let appliedDelta = 0;
+
+    for (let i = 0; i < remaining; i++) {
+      if (next.buildQueue.length >= next.maxConcurrentBuilds) break;
+
+      const cfg = FACILITY_BUILD_CONFIG[fac.type];
+      const capex = cfg.capexPerLine;
+
+      // Infra cap check (only for adding lines)
+      if (direction > 0) {
+        const usedPoints = next.infrastructurePointsUsed;
+        const costPoints = LINE_POINTS[fac.type];
+        if (usedPoints + costPoints > next.infrastructurePointsCap) {
+          break;
+        }
+      }
+
+      if (cash < capex) break;
+      cash -= capex;
+
+      next.buildQueue.push({
+        id: cryptoRandomId(),
+        facilityType: fac.type,
+        deltaLines: direction,
+        remainingDays: cfg.buildDaysPerLine,
+        capexCost: capex,
+      });
+      appliedDelta += direction;
+      pendingByFac[fac.type] = (pendingByFac[fac.type] ?? 0) + direction;
+    }
+
+    // Snap desiredLines back to the maximum achievable target
+    fac.desiredLines = fac.lines + (pendingByFac[fac.type] ?? 0);
+  }
+
+  return next;
+}
+
+export function runBuildQueueTick(factory: FactoryState, days: number): FactoryState {
+  const next: FactoryState = {
+    ...factory,
+    facilities: factory.facilities.map((f) => ({ ...f })),
+    buildQueue: factory.buildQueue.map((o) => ({ ...o })),
+  };
+
+  for (const order of next.buildQueue) {
+    order.remainingDays -= days;
+    if (order.remainingDays <= 0) {
+      const fac = next.facilities.find((f) => f.type === order.facilityType);
+      if (!fac) continue;
+      fac.lines = Math.max(0, fac.lines + order.deltaLines);
+      // Sync desiredLines toward actual when builds finish
+      fac.desiredLines = fac.lines;
+
+      // Adjust infra points
+      const points = LINE_POINTS[order.facilityType];
+      if (order.deltaLines > 0) {
+        next.infrastructurePointsUsed += points;
+      } else if (order.deltaLines < 0) {
+        next.infrastructurePointsUsed = Math.max(
+          0,
+          next.infrastructurePointsUsed - points
+        );
+      }
+    }
+  }
+
+  next.buildQueue = next.buildQueue.filter((o) => o.remainingDays > 0);
+  return next;
+}
+
 // ---------- Core tick ----------
 
 export function runFactoryTick(
@@ -210,7 +351,24 @@ export function runFactoryTick(
     podsBuiltTotal: factory.podsBuiltTotal,
     podsReadyOnGround: factory.podsReadyOnGround,
     podsBuiltThisTick: 0,
+    buildQueue: factory.buildQueue.map((o) => ({ ...o })),
+    maxConcurrentBuilds: factory.maxConcurrentBuilds,
+    infrastructurePointsUsed: factory.infrastructurePointsUsed,
+    infrastructurePointsCap: factory.infrastructurePointsCap,
   };
+
+  // First, advance build queue (lines change over time)
+  let withBuilds = runBuildQueueTick(next, days);
+
+  // Apply opex based on active lines
+  let cash = withBuilds.inventory.cash ?? 0;
+  const monthFraction = days / 30;
+  withBuilds.facilities.forEach((fac) => {
+    const cfg = FACILITY_BUILD_CONFIG[fac.type];
+    const opex = fac.lines * cfg.opexPerLinePerMonth * monthFraction;
+    cash -= opex;
+  });
+  withBuilds.inventory.cash = cash;
 
   let podsCompletedThisTick = 0;
   let launchSlotsCreatedThisTick = 0;
@@ -224,10 +382,10 @@ export function runFactoryTick(
   ];
 
   facilityTypes.forEach((type) => {
-    const facility = getFacility(next, type);
-    if (facility.count <= 0 || facility.efficiency <= 0) return;
+    const facility = getFacility(withBuilds, type);
+    if (facility.lines <= 0 || facility.efficiency <= 0) return;
 
-    const active = getActiveRecipe(next, type);
+    const active = getActiveRecipe(withBuilds, type);
     const recipe = RECIPES[active.recipeId];
 
     const batchesPerMonth =
@@ -240,7 +398,7 @@ export function runFactoryTick(
     if (idealBatches <= 0) return;
 
     // Determine input-limited batches
-    const inv = next.inventory;
+    const inv = withBuilds.inventory;
     let maxBatchesByInputs = Infinity;
     (Object.keys(recipe.baseInputs) as ResourceId[]).forEach((rid) => {
       const requiredPerBatch = recipe.baseInputs[rid] ?? 0;
@@ -286,16 +444,42 @@ export function runFactoryTick(
     if (recipe.id === "integratePods") {
       const podsThisTick = actualBatches; // 1 pod per batch
       podsCompletedThisTick += podsThisTick;
-      next.podsBuiltThisTick += podsThisTick;
-      next.podsBuiltTotal += podsThisTick;
-      next.podsReadyOnGround += podsThisTick;
+      withBuilds.podsBuiltThisTick += podsThisTick;
+      withBuilds.podsBuiltTotal += podsThisTick;
+      withBuilds.podsReadyOnGround += podsThisTick;
     }
   });
 
-  const bottlenecks = getBottlenecksSummary(next, requiredThroughput);
+  const bottlenecks = getBottlenecksSummary(withBuilds, requiredThroughput);
+
+  // Soft efficiency penalties for overbuilt stages
+  const stageToFacility: Record<BottleneckStage, FacilityType> = {
+    chips: "chipFab",
+    racks: "rackLine",
+    pods: "podFactory",
+    launch: "launchComplex",
+  };
+
+  bottlenecks.forEach((b) => {
+    const fac = withBuilds.facilities.find(
+      (f) => f.type === stageToFacility[b.stage]
+    );
+    if (!fac) return;
+    if (b.utilization > 1.5) {
+      // Overbuilt: idle lines drag down efficiency
+      fac.efficiency = Math.max(0.4, fac.efficiency * 0.85);
+    }
+  });
+
+  // If cash is deeply negative, degrade efficiency slightly to signal stress
+  if (withBuilds.inventory.cash < 0) {
+    withBuilds.facilities.forEach((f) => {
+      f.efficiency = Math.max(0.3, f.efficiency * 0.9);
+    });
+  }
 
   return {
-    nextFactory: next,
+    nextFactory: withBuilds,
     podsCompletedThisTick,
     launchSlotsCreatedThisTick,
     bottlenecks,
@@ -315,7 +499,7 @@ export function getBottlenecksSummary(
   const stageFromFacility = (type: FacilityType, recipeId: RecipeId): number => {
     const facility =
       factory.facilities.find((f) => f.type === type) ??
-      ({ type, count: 0, level: 1, efficiency: 1 } as FacilityState);
+      ({ type, lines: 0, desiredLines: 0, level: 1, efficiency: 1 } as FacilityState);
     const recipe = RECIPES[recipeId];
     const batchesPerMonth =
       (30 / recipe.durationDays) * facilityThroughputMultiplier(facility);
@@ -362,11 +546,11 @@ export function createDefaultFactoryState(): FactoryState {
   };
 
   const facilities: FacilityState[] = [
-    { type: "chipFab", count: 1, level: 1, efficiency: 1 },
-    { type: "rackLine", count: 1, level: 1, efficiency: 1 },
-    { type: "podFactory", count: 1, level: 1, efficiency: 1 },
-    { type: "fuelDepot", count: 1, level: 1, efficiency: 1 },
-    { type: "launchComplex", count: 1, level: 1, efficiency: 1 },
+    { type: "chipFab", lines: 1, desiredLines: 1, level: 1, efficiency: 1 },
+    { type: "rackLine", lines: 1, desiredLines: 1, level: 1, efficiency: 1 },
+    { type: "podFactory", lines: 1, desiredLines: 1, level: 1, efficiency: 1 },
+    { type: "fuelDepot", lines: 1, desiredLines: 1, level: 1, efficiency: 1 },
+    { type: "launchComplex", lines: 1, desiredLines: 1, level: 1, efficiency: 1 },
   ];
 
   const activeRecipes: ActiveRecipe[] = [
@@ -384,6 +568,13 @@ export function createDefaultFactoryState(): FactoryState {
     podsBuiltTotal: 0,
     podsReadyOnGround: 0,
     podsBuiltThisTick: 0,
+    buildQueue: [],
+    maxConcurrentBuilds: 3,
+    infrastructurePointsUsed: facilities.reduce(
+      (sum, f) => sum + f.lines * LINE_POINTS[f.type],
+      0
+    ),
+    infrastructurePointsCap: 40,
   };
 }
 

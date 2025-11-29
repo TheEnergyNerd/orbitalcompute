@@ -423,55 +423,111 @@ export default function StrategyDeck() {
 
       {/* SECTION 6: Factory (Facilities & Bottlenecks) */}
       <div className="mt-4 border-t border-gray-800 pt-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
             Factory Lines
           </h4>
+          <span className="text-[10px] text-gray-400">
+            Build queue: {factory.buildQueue.length} / {factory.maxConcurrentBuilds}
+          </span>
+        </div>
+        <div className="mb-2">
+          <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+            <span>Infra</span>
+            <span>
+              {factory.infrastructurePointsUsed} / {factory.infrastructurePointsCap} pts
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className={`h-1.5 rounded-full ${
+                factory.infrastructurePointsUsed >= factory.infrastructurePointsCap
+                  ? "bg-red-500"
+                  : factory.infrastructurePointsUsed / factory.infrastructurePointsCap > 0.85
+                  ? "bg-yellow-400"
+                  : "bg-accent-blue"
+              }`}
+              style={{
+                width: `${
+                  factory.infrastructurePointsCap > 0
+                    ? Math.min(
+                        100,
+                        (factory.infrastructurePointsUsed / factory.infrastructurePointsCap) *
+                          100
+                      )
+                    : 0
+                }%`,
+              }}
+            />
+          </div>
         </div>
         <div className="space-y-2">
-          {factory.facilities.map((fac) => (
-            <div key={fac.type} className="flex flex-col gap-1 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300 capitalize">{fac.type}</span>
-                <span className="text-gray-400">
-                  Lines: <span className="text-white font-semibold">{fac.count}</span>{" "}
-                  · L{fac.level}
-                </span>
+          {factory.facilities.map((fac) => {
+            const pendingAdds =
+              factory.buildQueue.filter(
+                (o) => o.facilityType === fac.type && o.deltaLines > 0
+              ).length || 0;
+            const pendingRemovals =
+              factory.buildQueue.filter(
+                (o) => o.facilityType === fac.type && o.deltaLines < 0
+              ).length || 0;
+            return (
+              <div key={fac.type} className="flex flex-col gap-1 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 capitalize">{fac.type}</span>
+                  <span className="text-gray-400">
+                    Lines:{" "}
+                    <span className="text-white font-semibold">
+                      {fac.lines}
+                    </span>
+                    {pendingAdds > 0 || pendingRemovals > 0 ? (
+                      <span className="ml-1 text-[10px] text-gray-500">
+                        (build +{pendingAdds} / -{pendingRemovals})
+                      </span>
+                    ) : null}{" "}
+                    · L{fac.level}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  value={fac.desiredLines}
+                  onChange={(e) =>
+                    updateFactoryFacility(fac.type as FacilityType, {
+                      desiredLines: Number(e.target.value),
+                    } as any)
+                  }
+                  className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-blue"
+                />
               </div>
-              <input
-                type="range"
-                min={0}
-                max={10}
-                value={fac.count}
-                onChange={(e) =>
-                  updateFactoryFacility(fac.type as FacilityType, {
-                    count: Number(e.target.value),
-                  })
-                }
-                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-blue"
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
         {factoryBottlenecks.length > 0 && (
           <div className="mt-3 text-xs text-gray-400 space-y-1">
             <div className="font-semibold text-gray-300">Bottlenecks</div>
-            {factoryBottlenecks.map((b) => (
-              <div key={b.stage} className="flex justify-between">
-                <span className="capitalize">{b.stage}</span>
-                <span
-                  className={
-                    b.utilization < 0.6
-                      ? "text-red-400"
-                      : b.utilization < 1
-                      ? "text-yellow-400"
-                      : "text-green-400"
-                  }
-                >
-                  {(b.utilization * 100).toFixed(0)}%
-                </span>
-              </div>
-            ))}
+            {factoryBottlenecks.map((b) => {
+              const utilPct = b.utilization * 100;
+              let label = "Balanced";
+              let color = "text-green-400";
+              if (b.utilization < 0.7) {
+                label = "Starved";
+                color = "text-red-400";
+              } else if (b.utilization > 1.2) {
+                label = "Overbuilt";
+                color = "text-yellow-400";
+              }
+              return (
+                <div key={b.stage} className="flex justify-between">
+                  <span className="capitalize">
+                    {b.stage}{" "}
+                    <span className="text-[10px] text-gray-500">({label})</span>
+                  </span>
+                  <span className={color}>{utilPct.toFixed(0)}%</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -14,6 +14,7 @@ import type {
 import {
   createDefaultFactoryState,
   runFactoryTick as runFactoryTickEngine,
+  reconcileDesiredLines,
 } from "../lib/factory/factoryEngine";
 
 export type SandboxPreset = "all_earth" | "hybrid_2035" | "orbit_dominant_2060" | "extreme_100_orbit" | "custom";
@@ -395,11 +396,17 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
       const facilities = state.factory.facilities.map((f) =>
         f.type === type ? { ...f, ...changes } : f
       );
+      const updatedFactory: FactoryState = {
+        ...state.factory,
+        facilities,
+      };
+      // Reconcile desired lines into concrete build orders, using current cash
+      const reconciled = reconcileDesiredLines(
+        updatedFactory,
+        updatedFactory.inventory.cash ?? 0
+      );
       return {
-        factory: {
-          ...state.factory,
-          facilities,
-        },
+        factory: reconciled,
       };
     }),
 }));
