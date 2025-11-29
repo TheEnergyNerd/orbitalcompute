@@ -5,6 +5,16 @@ import { useSimStore } from "./simStore";
 import { useOrbitalUnitsStore } from "./orbitalUnitsStore";
 import type { PodTierId } from "../lib/deployment/podTiers";
 import type { LaunchProviderId } from "../lib/deployment/launchProviders";
+import type {
+  FactoryState,
+  BottleneckSummary,
+  FacilityType,
+  FacilityState,
+} from "../lib/factory/factoryEngine";
+import {
+  createDefaultFactoryState,
+  runFactoryTick as runFactoryTickEngine,
+} from "../lib/factory/factoryEngine";
 
 export type SandboxPreset = "all_earth" | "hybrid_2035" | "orbit_dominant_2060" | "extreme_100_orbit" | "custom";
 export type SandboxMode = "freeplay" | "missions";
@@ -40,6 +50,9 @@ interface SandboxStore {
   densityMode: DensityMode;
   // Deployment state
   totalPodsBuilt: number; // Total pods ever built (for tier unlocks)
+  // Factory / production engine
+  factory: FactoryState;
+  factoryBottlenecks: BottleneckSummary[];
   setOrbitalComputeUnits: (units: number) => void;
   addOrbitalCompute: () => void;
   setGroundDCReduction: (percent: number) => void;
@@ -64,6 +77,9 @@ interface SandboxStore {
   setOffloadPct: (pct: number) => void;
   setDensityMode: (mode: DensityMode) => void;
   incrementTotalPodsBuilt: () => void;
+  // Factory controls
+  runFactoryTick: (days: number, targetPodsPerMonth: number) => void;
+  updateFactoryFacility: (type: FacilityType, changes: Partial<FacilityState>) => void;
 }
 
 export const useSandboxStore = create<SandboxStore>((set, get) => ({
@@ -94,6 +110,9 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
   densityMode: "Safe", // Start with Safe (first mission requirement)
   // Deployment state
   totalPodsBuilt: 0, // Start at 0 pods built
+  // Factory state
+  factory: createDefaultFactoryState(),
+  factoryBottlenecks: [],
   setOrbitalComputeUnits: (units) => {
     set({ orbitalComputeUnits: units });
     // Check if we've entered "mostly space" mode
@@ -357,6 +376,32 @@ export const useSandboxStore = create<SandboxStore>((set, get) => ({
   setOffloadPct: (pct) => set({ offloadPct: Math.max(0, Math.min(100, pct)) }),
   setDensityMode: (mode) => set({ densityMode: mode }),
   incrementTotalPodsBuilt: () => set((state) => ({ totalPodsBuilt: state.totalPodsBuilt + 1 })),
+  // Factory controls
+  runFactoryTick: (days, targetPodsPerMonth) => {
+    set((state) => {
+      const result = runFactoryTickEngine(state.factory, days, {
+        targetPodsPerMonth,
+      });
+      return {
+        factory: result.nextFactory,
+        factoryBottlenecks: result.bottlenecks,
+        // Keep totalPodsBuilt in sync with factory
+        totalPodsBuilt: result.nextFactory.podsBuiltTotal,
+      };
+    });
+  },
+  updateFactoryFacility: (type, changes) =>
+    set((state) => {
+      const facilities = state.factory.facilities.map((f) =>
+        f.type === type ? { ...f, ...changes } : f
+      );
+      return {
+        factory: {
+          ...state.factory,
+          facilities,
+        },
+      };
+    }),
 }));
 
 

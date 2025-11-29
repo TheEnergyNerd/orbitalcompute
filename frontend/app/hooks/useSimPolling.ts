@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import axios from "axios";
 import { useSimStore, SimState } from "../store/simStore";
+import { useSandboxStore } from "../store/sandboxStore";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export function useSimPolling() {
   const { setState, setLoading, setError } = useSimStore();
+  // Access factory tick function via store getter (safe outside React render)
+  const runFactoryTick = useSandboxStore.getState().runFactoryTick;
 
   useEffect(() => {
     let retryCount = 0;
@@ -25,6 +28,17 @@ export function useSimPolling() {
           setLoading(false);
           retryCount = 0; // Reset retry count on success
           console.log("[useSimPolling] State loaded successfully, loading set to false");
+          // Advance local factory engine by 1 simulated day per poll,
+          // targeting current pods/month from backend metrics if available.
+          const targetPodsPerMonth =
+            (response.data.metrics as any)?.podsPerMonth ??
+            (response.data.metrics as any)?.pods_per_month ??
+            10;
+          try {
+            runFactoryTick(1, targetPodsPerMonth);
+          } catch (e) {
+            console.warn("[useSimPolling] runFactoryTick failed:", e);
+          }
         } else {
           console.error("Invalid state structure:", response.data);
           setError("Invalid state structure");

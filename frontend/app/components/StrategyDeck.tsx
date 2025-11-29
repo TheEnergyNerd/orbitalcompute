@@ -7,6 +7,7 @@ import { calculateDeploymentEngine, type DeploymentState } from "../lib/deployme
 import { POD_TIERS, getAvailableTiers, type PodTierId } from "../lib/deployment/podTiers";
 import { LAUNCH_PROVIDERS, type LaunchProviderId } from "../lib/deployment/launchProviders";
 import { getDensityBand } from "../lib/deployment/orbitalDensity";
+import type { FacilityType } from "../lib/factory/factoryEngine";
 
 export default function StrategyDeck() {
   const {
@@ -26,6 +27,9 @@ export default function StrategyDeck() {
     unlockedOrbitModes,
     unlockedLaunchProviders,
     activeMissionId,
+    factory,
+    factoryBottlenecks,
+    updateFactoryFacility,
   } = useSandboxStore();
 
   const { getDeployedUnits, getQueuedUnits } = useOrbitalUnitsStore();
@@ -416,6 +420,61 @@ export default function StrategyDeck() {
           </div>
         </div>
       )}
+
+      {/* SECTION 6: Factory (Facilities & Bottlenecks) */}
+      <div className="mt-4 border-t border-gray-800 pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Factory Lines
+          </h4>
+        </div>
+        <div className="space-y-2">
+          {factory.facilities.map((fac) => (
+            <div key={fac.type} className="flex flex-col gap-1 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300 capitalize">{fac.type}</span>
+                <span className="text-gray-400">
+                  Lines: <span className="text-white font-semibold">{fac.count}</span>{" "}
+                  · L{fac.level}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                value={fac.count}
+                onChange={(e) =>
+                  updateFactoryFacility(fac.type as FacilityType, {
+                    count: Number(e.target.value),
+                  })
+                }
+                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-blue"
+              />
+            </div>
+          ))}
+        </div>
+        {factoryBottlenecks.length > 0 && (
+          <div className="mt-3 text-xs text-gray-400 space-y-1">
+            <div className="font-semibold text-gray-300">Bottlenecks</div>
+            {factoryBottlenecks.map((b) => (
+              <div key={b.stage} className="flex justify-between">
+                <span className="capitalize">{b.stage}</span>
+                <span
+                  className={
+                    b.utilization < 0.6
+                      ? "text-red-400"
+                      : b.utilization < 1
+                      ? "text-yellow-400"
+                      : "text-green-400"
+                  }
+                >
+                  {(b.utilization * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       
       {/* Mobile: Close button */}
       {isMobileOpen && (
