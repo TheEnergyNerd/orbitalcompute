@@ -48,7 +48,7 @@ export default function LeftPanel({ selectedNodeId: propSelectedNodeId, onSelect
       )}
 
       <div
-        className={`fixed top-[70px] left-6 w-64 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10 ${
+        className={`fixed top-[70px] left-6 w-64 z-40 panel-glass rounded-xl p-4 shadow-2xl border border-white/10 max-h-[calc(100vh-300px)] overflow-y-auto ${
           isMobileOpen ? "block" : "hidden sm:block"
         }`}
       >

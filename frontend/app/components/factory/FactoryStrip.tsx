@@ -307,7 +307,7 @@ export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactorySt
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-[200px] bg-gray-900/95 border-t border-gray-700 z-30 overflow-hidden">
+    <div className="fixed bottom-0 left-0 right-0 h-[200px] bg-gray-900/95 border-t border-gray-700 z-20 overflow-visible" style={{ marginLeft: isMobile ? '0' : '280px' }}>
       <svg
         viewBox={`0 0 ${currentX + 20} ${isMobile ? 300 : 200}`}
         className="w-full h-full"
