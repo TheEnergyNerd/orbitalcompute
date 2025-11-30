@@ -18,7 +18,7 @@ interface FactorySidebarProps {
  * FactorySidebar - HUD for factory view
  * Shows: Factory summary, Selected node detail, Collapsible machines list
  */
-export default function FactorySidebar({ selectedNodeId, onSelectNode }: FactorySidebarProps) {
+export default function FactorySidebar({ selectedNodeId, onSelectNode, highlightNodeId }: FactorySidebarProps) {
   const { simState, updateMachineLines, timeScale } = useSandboxStore();
   const [machinesExpanded, setMachinesExpanded] = useState(false);
 
@@ -28,26 +28,43 @@ export default function FactorySidebar({ selectedNodeId, onSelectNode }: Factory
 
   const { machines, resources } = simState;
 
-  // Calculate bottlenecks and overproduced
-  const bottlenecks: Array<{ id: ResourceId; name: string; severity: number }> = [];
+  // Calculate bottlenecks, starved, and overproduced using narrator logic
+  const bottlenecks: Array<{ id: string; name: string; severity: number }> = [];
+  const starved: Array<{ id: string; name: string; severity: number }> = [];
   const overproduced: Array<{ id: ResourceId; name: string; netRate: number }> = [];
   
-  for (const [resourceId, resource] of Object.entries(resources)) {
-    const netRate = resource.prodPerMin - resource.consPerMin;
-    const status: NodeStatus = {
-      state: 'healthy',
-      utilization: resource.consPerMin > 0 ? resource.prodPerMin / resource.consPerMin : 0,
-      buffer: resource.buffer,
-    };
-    const classified = classifyNode(status);
+  // Check machines for bottlenecks and starvation
+  Object.entries(machines).forEach(([machineId, machine]) => {
+    if (machine.lines === 0) return;
     
-    if (classified === 'starved' && resource.buffer <= 0.01) {
+    const utilization = getMachineUtilization(machine, resources);
+    const isStarved = utilization < 0.1 && machine.lines > 0;
+    const isConstrained = utilization > 0.8;
+    
+    if (isStarved) {
+      const severity = (1 - utilization) * 100;
+      starved.push({
+        id: machineId,
+        name: machine.name,
+        severity,
+      });
+    } else if (isConstrained) {
+      const severity = utilization * 10;
       bottlenecks.push({
-        id: resourceId as ResourceId,
-        name: resource.name,
-        severity: Math.abs(netRate),
+        id: machineId,
+        name: machine.name,
+        severity,
       });
     }
+  });
+  
+  // Sort by severity
+  bottlenecks.sort((a, b) => b.severity - a.severity);
+  starved.sort((a, b) => b.severity - a.severity);
+  
+  // Check resources for overproduction
+  for (const [resourceId, resource] of Object.entries(resources)) {
+    const netRate = resource.prodPerMin - resource.consPerMin;
     if (netRate > 10 && resource.buffer > 100) {
       overproduced.push({
         id: resourceId as ResourceId,
@@ -56,6 +73,8 @@ export default function FactorySidebar({ selectedNodeId, onSelectNode }: Factory
       });
     }
   }
+  
+  overproduced.sort((a, b) => b.netRate - a.netRate);
 
   // Get total launches per month
   const launchesPerMonth = (resources.launches?.prodPerMin ?? 0) * 60 * 24 * 30;
@@ -152,12 +171,23 @@ export default function FactorySidebar({ selectedNodeId, onSelectNode }: Factory
       <div className="p-3 rounded-lg border border-gray-700 bg-gray-800/50">
         <div className="text-xs font-semibold text-gray-300 mb-2">Factory Health</div>
         
-        {bottlenecks.length > 0 && (
+        <div className="mb-2">
+          <div className="text-[10px] text-orange-400 mb-1">Bottleneck:</div>
+          {bottlenecks.length > 0 ? (
+            <div className="text-[10px] text-gray-300 ml-2">
+              {bottlenecks[0].name}
+            </div>
+          ) : (
+            <div className="text-[10px] text-gray-500 ml-2">None</div>
+          )}
+        </div>
+
+        {starved.length > 0 && (
           <div className="mb-2">
-            <div className="text-[10px] text-red-400 mb-1">Bottlenecks:</div>
-            {bottlenecks.slice(0, 3).map(b => (
-              <div key={b.id} className="text-[10px] text-gray-400 ml-2">
-                • {b.name}
+            <div className="text-[10px] text-red-400 mb-1">Starved:</div>
+            {starved.slice(0, 3).map(s => (
+              <div key={s.id} className="text-[10px] text-gray-300 ml-2">
+                • {s.name}
               </div>
             ))}
           </div>
@@ -167,7 +197,7 @@ export default function FactorySidebar({ selectedNodeId, onSelectNode }: Factory
           <div className="mb-2">
             <div className="text-[10px] text-green-400 mb-1">Overproduced:</div>
             {overproduced.slice(0, 3).map(o => (
-              <div key={o.id} className="text-[10px] text-gray-400 ml-2">
+              <div key={o.id} className="text-[10px] text-gray-300 ml-2">
                 • {o.name} (+{formatSigFigs(o.netRate, 1)}/min)
               </div>
             ))}

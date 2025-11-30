@@ -19,6 +19,7 @@ import {
 interface FactoryStripProps {
   selectedNodeId?: string | null;
   onSelectNode?: (nodeId: string | null) => void;
+  highlightNodeId?: string | null; // Node to highlight as bottleneck
 }
 
 const BUILDING_WIDTH = 80;
@@ -50,7 +51,7 @@ const RESOURCE_FLOWS: Array<{ from: string; to: string; resource: ResourceId; co
   { from: "fuelPlant", to: "launchComplex", resource: "fuel", color: "#f97316" },
 ];
 
-export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactoryStripProps) {
+export default function FactoryStrip({ selectedNodeId, onSelectNode, highlightNodeId }: FactoryStripProps) {
   const { simState } = useSandboxStore();
   const [isMobile, setIsMobile] = useState(false);
   const animationFrameRef = useRef<number>();
@@ -363,25 +364,64 @@ export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactorySt
             opacity="0.8"
           />
         )}
-        {/* Label below building (or to the right on mobile) */}
+        {isHighlighted && (
+          <rect
+            x="-4"
+            y="-4"
+            width={width + 8}
+            height={height + 8}
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth="3"
+            rx="6"
+            opacity="0.9"
+            className="animate-pulse"
+            style={{ transform: `scale(1.05)` }}
+          />
+        )}
+        {/* Label and subtitle below building (or to the right on mobile) */}
         {isMobile ? (
-          <text
-            x={width + 10}
-            y={height / 2 + 4}
-            textAnchor="start"
-            className="text-[10px] fill-gray-300 font-semibold"
-          >
-            {building.label}
-          </text>
+          <>
+            <text
+              x={width + 10}
+              y={height / 2 - 4}
+              textAnchor="start"
+              className="text-[11px] fill-gray-300 font-semibold"
+            >
+              {building.label}
+            </text>
+            {building.subtitle && (
+              <text
+                x={width + 10}
+                y={height / 2 + 10}
+                textAnchor="start"
+                className="text-[9px] fill-gray-400"
+              >
+                {building.subtitle}
+              </text>
+            )}
+          </>
         ) : (
-          <text
-            x={width / 2}
-            y={height + 15}
-            textAnchor="middle"
-            className="text-[10px] fill-gray-300 font-semibold"
-          >
-            {building.label}
-          </text>
+          <>
+            <text
+              x={width / 2}
+              y={height + 12}
+              textAnchor="middle"
+              className="text-[11px] fill-gray-300 font-semibold"
+            >
+              {building.label}
+            </text>
+            {building.subtitle && (
+              <text
+                x={width / 2}
+                y={height + 24}
+                textAnchor="middle"
+                className="text-[9px] fill-gray-400"
+              >
+                {building.subtitle}
+              </text>
+            )}
+          </>
         )}
       </g>
     );

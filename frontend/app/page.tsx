@@ -27,6 +27,7 @@ export default function Home() {
   const viewerRef = useCesiumViewer("cesium-globe-container");
   const safeMode = getSafeMode();
   const [factorySelectedNode, setFactorySelectedNode] = useState<string | null>(null);
+  const bottleneck = useFactoryNarrator();
   
   // Log GPU event on mount
   useEffect(() => {
@@ -70,7 +71,8 @@ export default function Home() {
           <SunClockSimplified />
           <TimeScaleControl />
           <KpiBar />
-          <FactoryStrip selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
+          <FactoryNarrator />
+          <FactoryStrip selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} highlightNodeId={bottleneck?.nodeId || null} />
           <FactoryStatusBar />
           <ShareFactoryButton />
           <FactoryHelpPanel />

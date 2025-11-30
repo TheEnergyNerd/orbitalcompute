@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSandboxStore } from "../store/sandboxStore";
 import MissionPanel from "./MissionPanel";
 import FactorySidebar from "./FactorySidebar";
+import { useFactoryNarrator } from "./factory/FactoryNarrator";
 
 type Mode = "factory" | "orbit" | "missions";
 
@@ -17,6 +18,7 @@ export default function LeftPanel({ selectedNodeId: propSelectedNodeId, onSelect
   const [activeMode, setActiveMode] = useState<Mode>("factory");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [internalSelectedNode, setInternalSelectedNode] = useState<string | null>(null);
+  const bottleneck = useFactoryNarrator();
   
   // Use prop if provided, otherwise use internal state
   const selectedNodeId = propSelectedNodeId !== undefined ? propSelectedNodeId : internalSelectedNode;
@@ -90,6 +92,7 @@ export default function LeftPanel({ selectedNodeId: propSelectedNodeId, onSelect
           <FactorySidebar
             selectedNodeId={selectedNodeId as any}
             onSelectNode={onSelectNode}
+            highlightNodeId={bottleneck?.nodeId || null}
           />
         )}
 
