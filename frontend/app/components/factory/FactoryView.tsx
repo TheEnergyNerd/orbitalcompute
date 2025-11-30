@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSandboxStore } from "../../store/sandboxStore";
-import { getMachineUtilization } from "../../lib/sim/engine";
+import { getMachineUtilization, getResourceThroughput } from "../../lib/sim/engine";
 import type { SimState, ResourceId, MachineId } from "../../lib/sim/model";
 import { FACTORY_NODES, FACTORY_EDGES, getResourceColor, type FactoryNodeId } from "../../lib/factory/factoryLayout";
 import { formatSigFigs, formatDecimal } from "../../lib/utils/formatNumber";
@@ -33,8 +33,6 @@ function getMachineUtilizationFromSim(id: MachineId, sim: SimState): number {
 function getResourceBufferFromSim(id: ResourceId, sim: SimState): number {
   return sim.resources[id]?.buffer ?? 0;
 }
-
-import { getResourceThroughput as getResourceThroughputEngine } from "../../lib/sim/engine";
 
 /**
  * FactoryView - Top-down schematic view of the factory (PRIMARY VIEW)
@@ -147,7 +145,7 @@ export default function FactoryView({ selectedNodeId = null, onSelectNode }: Fac
           const toX = toNode.x * viewBoxWidth + (toNode.width * viewBoxWidth) / 2;
           const toY = toNode.y * viewBoxHeight + (toNode.height * viewBoxHeight) / 2;
 
-          const throughput = getResourceThroughputEngine(edge.resource, simState);
+          const throughput = getResourceThroughput(edge.resource, simState);
           const speed = Math.min(1, throughput / 100);
           const opacity = throughput > 0 ? 0.6 + (speed * 0.4) : 0.2;
           const color = getResourceColor(edge.resource);
