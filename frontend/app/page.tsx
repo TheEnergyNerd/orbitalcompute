@@ -11,6 +11,7 @@ import TimeScaleControl from "./components/TimeScaleControl";
 import SandboxModeSwitcher from "./components/SandboxModeSwitcher";
 import FactoryStrip from "./components/factory/FactoryStrip";
 import FactoryHelpPanel from "./components/FactoryHelpPanel";
+import FactoryStatusBar from "./components/factory/FactoryStatusBar";
 import { useEffect, useState } from "react";
 import { useSimStore } from "./store/simStore";
 import { useSandboxStore } from "./store/sandboxStore";
