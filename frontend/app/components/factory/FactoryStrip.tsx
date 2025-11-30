@@ -55,6 +55,8 @@ export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactorySt
   const [isMobile, setIsMobile] = useState(false);
   const animationFrameRef = useRef<number>();
   const packetOffsetsRef = useRef<Record<string, number>>({});
+  const lastLaunchCountRef = useRef(0);
+  const [launchAnimations, setLaunchAnimations] = useState<Array<{ id: number; startTime: number }>>([]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -64,6 +66,27 @@ export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactorySt
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Detect launch events
+  useEffect(() => {
+    if (simState) {
+      const currentLaunches = Math.floor(simState.resources.launches?.buffer ?? 0);
+      if (currentLaunches > lastLaunchCountRef.current) {
+        // New launch detected
+        const newLaunch = {
+          id: Date.now(),
+          startTime: Date.now(),
+        };
+        setLaunchAnimations((prev) => [...prev, newLaunch]);
+        lastLaunchCountRef.current = currentLaunches;
+        
+        // Remove animation after 3 seconds
+        setTimeout(() => {
+          setLaunchAnimations((prev) => prev.filter((a) => a.id !== newLaunch.id));
+        }, 3000);
+      }
+    }
+  }, [simState]);
 
   useEffect(() => {
     // Animate packet offsets

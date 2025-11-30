@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSandboxStore } from "../store/sandboxStore";
 import MissionPanel from "./MissionPanel";
 import FactorySidebar from "./FactorySidebar";
-import FactoryView from "./factory/FactoryView";
 
 type Mode = "factory" | "orbit" | "missions";
 
