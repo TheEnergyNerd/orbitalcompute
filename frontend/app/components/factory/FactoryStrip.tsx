@@ -406,6 +406,34 @@ export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactorySt
         {BUILDING_ORDER.map(renderBuilding)}
         {renderBuilding({ id: "fuelPlant", type: "machine", label: "Fuel Plant" } as const)}
         {renderBuilding({ id: "steelSource", type: "source", label: "Steel" } as const)}
+        
+        {/* Rocket launch animations */}
+        {launchAnimations.map((anim) => {
+          const launchPos = buildingPositions["launchComplex"];
+          if (!launchPos) return null;
+          
+          const elapsed = (Date.now() - anim.startTime) / 1000;
+          const progress = Math.min(1, elapsed / 3); // 3 second animation
+          
+          if (progress >= 1) return null;
+          
+          // Rocket rises from launch pad
+          const startX = launchPos.x + BUILDING_WIDTH / 2;
+          const startY = launchPos.y + BUILDING_HEIGHT;
+          const endY = startY - 100 * progress; // Rise 100px over 3 seconds
+          
+          return (
+            <g key={anim.id} opacity={1 - progress}>
+              <path
+                d={`M${startX} ${startY} L${startX - 3} ${endY} L${startX + 3} ${endY} Z`}
+                fill="#cbd5e1"
+                stroke="#94a3b8"
+                strokeWidth="1"
+              />
+              <circle cx={startX} cy={endY} r="2" fill="#facc15" />
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
