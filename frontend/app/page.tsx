@@ -9,7 +9,7 @@ import KpiBar from "./components/KpiBar";
 import SunClockSimplified from "./components/SunClockSimplified";
 import TimeScaleControl from "./components/TimeScaleControl";
 import SandboxModeSwitcher from "./components/SandboxModeSwitcher";
-import FactoryView from "./components/factory/FactoryView";
+import FactoryStrip from "./components/factory/FactoryStrip";
 import FactoryHelpPanel from "./components/FactoryHelpPanel";
 import { useEffect, useState } from "react";
 import { useSimStore } from "./store/simStore";
@@ -68,7 +68,7 @@ export default function Home() {
           <SunClockSimplified />
           <TimeScaleControl />
           <KpiBar />
-          <FactoryView selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
+          <FactoryStrip selectedNodeId={factorySelectedNode} onSelectNode={setFactorySelectedNode} />
           <FactoryHelpPanel />
           <SandboxVisualizations />
           <DetailPanel />

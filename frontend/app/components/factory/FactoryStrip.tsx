@@ -1,0 +1,300 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useSandboxStore } from "../../store/sandboxStore";
+import { getMachineUtilization, getResourceThroughput } from "../../lib/sim/engine";
+import type { SimState, ResourceId, MachineId } from "../../lib/sim/model";
+import { formatSigFigs, formatDecimal } from "../../lib/utils/formatNumber";
+import { classifyNode } from "../../lib/ui/semantics";
+import {
+  ChipFabBuilding,
+  RackLineBuilding,
+  PodFactoryBuilding,
+  FuelPlantBuilding,
+  LaunchComplexBuilding,
+  SiliconSourceBuilding,
+  SteelSourceBuilding,
+} from "./BuildingSprites";
+
+interface FactoryStripProps {
+  selectedNodeId?: string | null;
+  onSelectNode?: (nodeId: string | null) => void;
+}
+
+const BUILDING_WIDTH = 80;
+const BUILDING_HEIGHT = 60;
+const SOURCE_WIDTH = 60;
+const SOURCE_HEIGHT = 40;
+const CONDUIT_HEIGHT = 8;
+const PACKET_COUNT = 6;
+const PACKET_RADIUS = 4;
+
+// Building order for horizontal layout
+const BUILDING_ORDER = [
+  { id: "siliconSource", type: "source", label: "Silicon" },
+  { id: "chipFab", type: "machine", label: "Chip Fab" },
+  { id: "rackLine", type: "machine", label: "Rack Line" },
+  { id: "podFactory", type: "machine", label: "Pod Factory" },
+  { id: "fuelPlant", type: "machine", label: "Fuel Plant" },
+  { id: "launchComplex", type: "machine", label: "Launch" },
+] as const;
+
+// Resource flow paths
+const RESOURCE_FLOWS: Array<{ from: string; to: string; resource: ResourceId; color: string }> = [
+  { from: "siliconSource", to: "chipFab", resource: "silicon", color: "#a78bfa" },
+  { from: "steelSource", to: "rackLine", resource: "steel", color: "#cbd5e1" },
+  { from: "chipFab", to: "rackLine", resource: "chips", color: "#22d3ee" },
+  { from: "chipFab", to: "podFactory", resource: "chips", color: "#22d3ee" },
+  { from: "rackLine", to: "podFactory", resource: "racks", color: "#facc15" },
+  { from: "podFactory", to: "launchComplex", resource: "pods", color: "#f472b6" },
+  { from: "fuelPlant", to: "launchComplex", resource: "fuel", color: "#f97316" },
+];
+
+export default function FactoryStrip({ selectedNodeId, onSelectNode }: FactoryStripProps) {
+  const { simState } = useSandboxStore();
+  const [isMobile, setIsMobile] = useState(false);
+  const animationFrameRef = useRef<number>();
+  const packetOffsetsRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 700);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    // Animate packet offsets
+    const animate = () => {
+      if (!simState) return;
+
+      // Update packet offsets based on throughput
+      RESOURCE_FLOWS.forEach((flow) => {
+        const throughput = getResourceThroughput(flow.resource, simState);
+        const speed = Math.max(throughput / 100, 0.15); // Minimum speed 0.15
+        const key = `${flow.from}-${flow.to}`;
+        packetOffsetsRef.current[key] = (packetOffsetsRef.current[key] || 0) + speed * 0.5;
+        if (packetOffsetsRef.current[key] > 100) {
+          packetOffsetsRef.current[key] = 0;
+        }
+      });
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [simState]);
+
+  if (!simState) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 h-[200px] bg-gray-900/95 border-t border-gray-700 z-30 flex items-center justify-center">
+        <div className="text-xs text-gray-500">Loading factory state...</div>
+      </div>
+    );
+  }
+
+  const { machines, resources } = simState;
+
+  // Calculate building positions
+  const buildingPositions: Record<string, { x: number; y: number }> = {};
+  let currentX = 20;
+  const centerY = isMobile ? 40 : 100;
+  const spacing = isMobile ? 15 : 30;
+
+  BUILDING_ORDER.forEach((building) => {
+    if (building.type === "source") {
+      buildingPositions[building.id] = { x: currentX, y: centerY - SOURCE_HEIGHT / 2 };
+      currentX += SOURCE_WIDTH + spacing;
+    } else {
+      buildingPositions[building.id] = { x: currentX, y: centerY - BUILDING_HEIGHT / 2 };
+      currentX += BUILDING_WIDTH + spacing;
+    }
+  });
+
+  // Add fuel plant position (below pod factory)
+  const podFactoryX = buildingPositions["podFactory"]?.x || 0;
+  buildingPositions["fuelPlant"] = {
+    x: podFactoryX,
+    y: centerY + BUILDING_HEIGHT / 2 + 20,
+  };
+  
+  // Add steel source (for rack line, positioned above)
+  buildingPositions["steelSource"] = {
+    x: buildingPositions["rackLine"]?.x || 0,
+    y: centerY - BUILDING_HEIGHT / 2 - SOURCE_HEIGHT - 10,
+  };
+
+  const getBuildingUtilization = (buildingId: string): number => {
+    if (buildingId === "siliconSource" || buildingId === "steelSource") return 1; // Sources always active
+    const machine = machines[buildingId as MachineId];
+    if (!machine) return 0;
+    return getMachineUtilization(machine, resources);
+  };
+
+  const getBuildingStatus = (buildingId: string): { isStarved: boolean; isConstrained: boolean } => {
+    if (buildingId === "siliconSource" || buildingId === "steelSource") {
+      return { isStarved: false, isConstrained: false };
+    }
+    const machine = machines[buildingId as MachineId];
+    if (!machine) return { isStarved: false, isConstrained: false };
+    const utilization = getMachineUtilization(machine, resources);
+    const isStarved = utilization < 0.1 && machine.lines > 0;
+    const isConstrained = utilization > 0.8;
+    return { isStarved, isConstrained };
+  };
+
+  const renderConduit = (flow: typeof RESOURCE_FLOWS[0]) => {
+    const fromPos = buildingPositions[flow.from];
+    const toPos = buildingPositions[flow.to];
+    if (!fromPos || !toPos) return null;
+
+    const throughput = getResourceThroughput(flow.resource, simState);
+    const speed = Math.max(throughput / 100, 0.15);
+    const opacity = throughput > 0 ? 0.6 + speed * 0.4 : 0.2;
+
+    // Calculate path
+    const fromIsSource = flow.from.includes("Source");
+    const fromOffsetX = fromIsSource ? SOURCE_WIDTH : BUILDING_WIDTH;
+    const fromOffsetY = fromIsSource ? SOURCE_HEIGHT / 2 : BUILDING_HEIGHT / 2;
+    
+    const startX = fromPos.x + fromOffsetX;
+    const startY = fromPos.y + fromOffsetY;
+    const endX = toPos.x;
+    const endY = toPos.y + BUILDING_HEIGHT / 2;
+
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    const key = `${flow.from}-${flow.to}`;
+    const baseOffset = packetOffsetsRef.current[key] || 0;
+
+    return (
+      <g key={`conduit-${flow.from}-${flow.to}`}>
+        {/* Conduit base (thick neon path) */}
+        <line
+          x1={startX}
+          y1={startY}
+          x2={endX}
+          y2={endY}
+          stroke={flow.color}
+          strokeWidth={CONDUIT_HEIGHT}
+          opacity={opacity * 0.3}
+          strokeLinecap="round"
+        />
+        
+        {/* Animated resource packets */}
+        {Array.from({ length: PACKET_COUNT }).map((_, i) => {
+          const packetOffset = (baseOffset + (i * (100 / PACKET_COUNT))) % 100;
+          const packetX = startX + (dx * packetOffset / 100);
+          const packetY = startY + (dy * packetOffset / 100);
+          
+          return (
+            <circle
+              key={`packet-${i}`}
+              cx={packetX}
+              cy={packetY}
+              r={PACKET_RADIUS}
+              fill={flow.color}
+              opacity={opacity}
+            />
+          );
+        })}
+      </g>
+    );
+  };
+
+  const renderBuilding = (building: typeof BUILDING_ORDER[0]) => {
+    const pos = buildingPositions[building.id];
+    if (!pos) return null;
+
+    const utilization = getBuildingUtilization(building.id);
+    const { isStarved, isConstrained } = getBuildingStatus(building.id);
+    const isSelected = selectedNodeId === building.id;
+
+    let BuildingComponent: React.ComponentType<BuildingSpriteProps>;
+    if (building.id === "siliconSource") {
+      BuildingComponent = SiliconSourceBuilding;
+    } else if (building.id === "chipFab") {
+      BuildingComponent = ChipFabBuilding;
+    } else if (building.id === "rackLine") {
+      BuildingComponent = RackLineBuilding;
+    } else if (building.id === "podFactory") {
+      BuildingComponent = PodFactoryBuilding;
+    } else if (building.id === "fuelPlant") {
+      BuildingComponent = FuelPlantBuilding;
+    } else if (building.id === "launchComplex") {
+      BuildingComponent = LaunchComplexBuilding;
+    } else {
+      return null;
+    }
+
+    const width = building.type === "source" ? SOURCE_WIDTH : BUILDING_WIDTH;
+    const height = building.type === "source" ? SOURCE_HEIGHT : BUILDING_HEIGHT;
+
+    return (
+      <g
+        key={building.id}
+        transform={`translate(${pos.x}, ${pos.y})`}
+        onClick={() => onSelectNode?.(building.id)}
+        className="cursor-pointer"
+      >
+        <BuildingComponent
+          utilization={utilization}
+          isStarved={isStarved}
+          isConstrained={isConstrained}
+          width={width}
+          height={height}
+        />
+        {isSelected && (
+          <rect
+            x="-2"
+            y="-2"
+            width={width + 4}
+            height={height + 4}
+            fill="none"
+            stroke="#60a5fa"
+            strokeWidth="3"
+            rx="6"
+            opacity="0.8"
+          />
+        )}
+        {/* Label below building */}
+        <text
+          x={width / 2}
+          y={height + 15}
+          textAnchor="middle"
+          className="text-[10px] fill-gray-300 font-semibold"
+        >
+          {building.label}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 h-[200px] bg-gray-900/95 border-t border-gray-700 z-30 overflow-hidden">
+      <svg
+        viewBox={`0 0 ${currentX + 20} ${isMobile ? 300 : 200}`}
+        className="w-full h-full"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Render conduits first (behind buildings) */}
+        {RESOURCE_FLOWS.map(renderConduit)}
+
+        {/* Render buildings */}
+        {BUILDING_ORDER.map(renderBuilding)}
+        {renderBuilding({ id: "fuelPlant", type: "machine", label: "Fuel Plant" })}
+        {renderBuilding({ id: "steelSource", type: "source", label: "Steel" })}
+      </svg>
+    </div>
+  );
+}
+
